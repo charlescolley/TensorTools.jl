@@ -72,7 +72,7 @@ end
         y = zeros(n)
 
         contract_multi_motif_tensor!(tensors[1].indices, tensors[2].indices,x,y_hc)
-        DTC.contraction!(tensors[1:2],x,y)
+        DTC.contraction_divide_out!(tensors[1:2],x,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
 
@@ -80,7 +80,7 @@ end
         y = zeros(n)
 
         contract_multi_motif_tensor!(tensors[1].indices, tensors[2].indices,x2,y_hc)
-        DTC.contraction!(tensors[1:2],x2,y)
+        DTC.contraction_divide_out!(tensors[1:2],x2,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
 

@@ -52,4 +52,6 @@ include("contraction.jl")
 export SymTensorUnweighted, TensorComplexUnweighted
 
 export tensor_from_graph, tensors_from_graph
+
+export contraction_divide_out!
 end #module end 

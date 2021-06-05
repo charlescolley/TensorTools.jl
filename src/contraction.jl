@@ -43,6 +43,15 @@ function contraction_divide_out!(A::SymTensorUnweighted, x::Array{Float64,1},y::
     end
 end
 
+function contraction_divide_out!(simplicial_complexes::Array{SymTensorUnweighted,1},x, y)
+    #assuming simplicial_complexes are sorted by their motif order
+
+    for i=1:length(simplicial_complexes)
+        contraction_divide_out!(simplicial_complexes[i],x,y)
+    end
+end
+
+
 function embedded_contraction!(A::SymTensorUnweighted, x::Array{T,1},y::Array{T,1},embedded_mode::Int) where T
 
     order,edges = size(A.indices)
@@ -85,15 +94,6 @@ function embedded_contraction!(A::SymTensorUnweighted, x::Array{T,1},y::Array{T,
             end
         end
     
-    end
-end
-
-
-function contraction!(simplicial_complexes::Array{SymTensorUnweighted,1},x, y)
-    #assuming simplicial_complexes are sorted by their motif order
-
-    for i=1:length(simplicial_complexes)
-        contraction_divide_out!(simplicial_complexes[i],x,y)
     end
 end
 
