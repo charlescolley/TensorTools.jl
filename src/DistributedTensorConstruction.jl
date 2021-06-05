@@ -17,6 +17,9 @@ using Random
 using MatrixNetworks
 using Distributed
 
+# -- contractions.jl -- #
+using Combinatorics:integer_partitions,permutations, multinomial
+
 #using PyCall
 #@pyimport pickle
 
