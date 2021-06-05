@@ -1,0 +1,24 @@
+name = "DistributedTensorConstruction"
+uuid = "776de601-c331-4922-91fc-ee89788146c7"
+authors = ["Charles Colley <ccolley@purdue.edu>"]
+version = "0.0.0"
+
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+JLD = "4138dd39-2aa7-5051-a626-17a0bb65d9c8"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MatrixNetworks = "4f449596-a032-5618-b826-5a251cb6dc11"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+
+[extras]
+Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test","Suppressor"]
