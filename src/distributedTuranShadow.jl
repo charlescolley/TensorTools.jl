@@ -125,10 +125,34 @@ function tensors_from_graph(A, orders::Array{Int,1}, sample_sizes::Array{Int,1})
     tensors = Array{SymTensorUnweighted,1}(undef,length(orders))
 
     for (i,(order,sample)) in enumerate(zip(orders,sample_sizes))
-        tensors[i] = tensor_from_graph(A, order, sample)
+        if order == 2
+            tensors[i] = matrix_to_SymTensorUnweighted(A)
+        else
+            tensors[i] = tensor_from_graph(A, order, sample)
+        end
     end
 
     return tensors
+end
+
+function matrix_to_SymTensorUnweighted(A::SparseMatrixCSC{T,Int}) where T
+
+    n,m = size(A)
+    @assert n == m
+
+    is,js,_ = findnz(A)
+    edge_list = [[i,j] for (i,j) in zip(is,js)]
+    reduce_to_unique_motifs!(edge_list)
+
+    edges = Array{Int,2}(undef,2,length(edge_list))
+
+    for idx = 1:length(edge_list)
+        edges[:,idx] = edge_list[idx]
+    end
+
+    return SymTensorUnweighted(n,2,edges)
+    
+
 end
 
 function tensor_from_graph(A, order, t)
