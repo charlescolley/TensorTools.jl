@@ -38,7 +38,7 @@ function contraction_divide_out!(A::SymTensorUnweighted, x::Array{Float64,1},y::
         end
 
         for j=1:order
-            y[A.indices[j,i]]+= (val/x[A.indices[j,i]])
+            y[A.indices[j,i]] += (val/x[A.indices[j,i]])
         end
     end
 end
@@ -100,7 +100,7 @@ end
 function embedded_contraction!(simplicial_complexes::Array{SymTensorUnweighted,1},x, y)
     #assuming simplicial_complexes are sorted by their motif order
 
-    max_order = size(simplicial_complexes[end],1)
+    max_order = size(simplicial_complexes[end].indices,1)
 
     for i=1:length(simplicial_complexes)
         if i == length(simplicial_complexes)
