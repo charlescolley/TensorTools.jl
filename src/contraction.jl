@@ -104,7 +104,8 @@ function embedded_contraction!(simplicial_complexes::Array{SymTensorUnweighted,1
 
     for i=1:length(simplicial_complexes)
         if i == length(simplicial_complexes)
-            contraction_divide_out!(simplicial_complexes[i],x,y)
+            #contraction_divide_out!(simplicial_complexes[i],x,y)
+            contraction!(simplicial_complexes[i],x,y)
         else
             embedded_contraction!(simplicial_complexes[i],x,y,max_order)
         end
