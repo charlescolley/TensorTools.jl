@@ -163,19 +163,19 @@ function tensor_from_graph(A, order, t)
 
     indices = zeros(order,length(cliques))
     idx = 1
-    n = -1
+    #n = -1
     
     for clique in cliques #is there a better way to do this? 
         indices[:,idx] = clique
-        n_c = maximum(clique)
-        if n < n_c
-            n = n_c
-        end
+        #n_c = maximum(clique)
+        #if n < n_c
+        #    n = n_c
+        #end
         idx += 1;
     end
 
     
-    return SymTensorUnweighted(n,order,round.(Int,indices))
+    return SymTensorUnweighted(size(A,1),order,round.(Int,indices))
 
 end
 
