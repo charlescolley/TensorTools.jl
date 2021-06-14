@@ -8,7 +8,7 @@ function contract_embedded_multi_motif_tensor!(third_order_Indices::Array{Intege
     x::Array{Float64,1},y::Array{Float64,1})
 
     fourth_order_contraction!(fourth_order_Indices::Array{Integer,2}, x::Array{Float64,1},y::Array{Float64,1})   
-    third_order_encoded_into_forth_order_contraction!(third_order_Indices::Array{Integer,2}, x::Array{Float64,1},y::Array{Float64,1})                        
+    third_order_encoded_into_fourth_order_contraction!(third_order_Indices::Array{Integer,2}, x::Array{Float64,1},y::Array{Float64,1})                        
 
 end
 
@@ -90,7 +90,7 @@ function fourth_order_contraction!(indices::Array{Int,2}, x::Array{T,1},y::Array
 end
 
 #Assuming that y is zeroed out and that weight on edges is 1. 
-function third_order_encoded_into_forth_order_contraction!(indices::Array{Int,2}, x::Array{T,1},y::Array{T,1}) where T
+function third_order_encoded_into_fourth_order_contraction!(indices::Array{Int,2}, x::Array{T,1},y::Array{T,1}) where T
 
     #TODO: needs more robust testing. 
     #      seems to work on small examples compared to Tensor Toolbox
@@ -103,23 +103,23 @@ function third_order_encoded_into_forth_order_contraction!(indices::Array{Int,2}
     for idx=1:nnz
         i,j,k = indices[:,idx]
 
-        y[i] += 6*x[j]*(x[k]^2)
-        y[j] += 6*x[i]*(x[k])^2
-        y[k] += 12*x[i]*x[j]*x[k]
+        y[i] += 3*x[j]*(x[k]^2)
+        y[j] += 3*x[i]*(x[k])^2
+        y[k] += 6*x[i]*x[j]*x[k]
 
-        y[i] += 6*(x[j]^2)*x[k]
-        y[j] += 12*x[i]*x[k]*x[j]
-        y[k] += 6*x[i]*x[j]^2
+        y[i] += 3*(x[j]^2)*x[k]
+        y[j] += 6*x[i]*x[k]*x[j]
+        y[k] += 3*x[i]*x[j]^2
 
-        y[i] += 12*x[j]*x[k]*x[i]
-        y[j] += 6*(x[i]^2)*x[k]
-        y[k] += 6*(x[i]^2)*x[j]
+        y[i] += 6*x[j]*x[k]*x[i]
+        y[j] += 3*(x[i]^2)*x[k]
+        y[k] += 3*(x[i]^2)*x[j]
 
     end
 
 end
 
-function second_order_encoded_into_forth_order_contraction!(indices::Array{Int,2}, x::Array{T,1},y::Array{T,1}) where T
+function second_order_encoded_into_fourth_order_contraction!(indices::Array{Int,2}, x::Array{T,1},y::Array{T,1}) where T
 
     #TODO: needs more robust testing. 
     #      seems to work on small examples compared to Tensor Toolbox
@@ -153,6 +153,6 @@ function contract_embedded_multi_motif_tensor!(third_order_Indices::Array{Int,2}
     x::Array{Float64,1},y::Array{Float64,1})
 
     fourth_order_contraction!(fourth_order_Indices::Array{Int,2}, x::Array{Float64,1},y::Array{Float64,1})   
-    third_order_encoded_into_forth_order_contraction!(third_order_Indices::Array{Int,2}, x::Array{Float64,1},y::Array{Float64,1})                        
+    third_order_encoded_into_fourth_order_contraction!(third_order_Indices::Array{Int,2}, x::Array{Float64,1},y::Array{Float64,1})                        
 
 end

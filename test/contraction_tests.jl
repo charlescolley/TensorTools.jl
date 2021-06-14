@@ -55,14 +55,14 @@ end
         y = zeros(n)
 
         DTC.embedded_contraction!(tensors[1], x,y,4)
-        third_order_encoded_into_forth_order_contraction!(tensors[1].indices,x,y_hc)
+        third_order_encoded_into_fourth_order_contraction!(tensors[1].indices,x,y_hc)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
 
         DTC.embedded_contraction!(tensors[1], x2,y,4)
-        third_order_encoded_into_forth_order_contraction!(tensors[1].indices,x2,y_hc)
+        third_order_encoded_into_fourth_order_contraction!(tensors[1].indices,x2,y_hc)
         @test norm(y - y_hc)/norm(y) < TOL
     end
 
@@ -82,8 +82,6 @@ end
         contract_multi_motif_tensor!(tensors[1].indices, tensors[2].indices,x2,y_hc)
         DTC.contraction_divide_out!(tensors[1:2],x2,y)
         @test norm(y - y_hc)/norm(y) < TOL
-
-
 
     end
 
