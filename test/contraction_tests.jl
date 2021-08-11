@@ -6,13 +6,24 @@ include("hard_coded_contractions.jl")
 
 @testset "Type Stability" begin
 
+    orders = [3,4]
+    tensors = tensors_from_graph(A,orders,1000,Clique())
+    
+    x  = ones(n)
+    y_divide_out = zeros(n)
+    y_naive = zeros(n)
+    y = zeros(n)
+
+    @inferred DTC.contraction_divide_out!(tensors[end],x,y_divide_out)
+    @inferred DTC.contraction!(tensors[end],x,y_naive)
+    @inferred DTC.embedded_contraction!(tensors[1], x,y,4)
 
 end
 
 @testset "Contraction Comparisons" begin 
 
     orders = [3,4,5]
-    tensors = tensors_from_graph(A,orders,1000)
+    tensors = tensors_from_graph(A,orders,1000,Clique())
     
     x  = ones(n)
     x2 = rand(n)
@@ -21,7 +32,7 @@ end
         for tensor in tensors
             y_naive = zeros(n)
             y_divide_out = zeros(n)
-            println(tensor.order)
+
             DTC.contraction_divide_out!(tensor,x,y_divide_out)
             DTC.contraction!(tensor,x,y_naive)
 

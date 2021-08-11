@@ -25,7 +25,7 @@ function distributed_clique_sample(matrix_file,output_path, orders, sample_count
 end
 
 
-function sample_motifs(matrix_file,output_path,orders,sample_counts)
+function sample_cliques(matrix_file,output_path,orders,sample_counts)
 
     #check file format
 
@@ -47,8 +47,8 @@ function sample_motifs(matrix_file,output_path,orders,sample_counts)
     for k in orders
 
     	#create a subfolder for given order
-	order_folder = "order:$(k)/"
-	local_folder = output_path*order_folder
+        order_folder = "order:$(k)/"
+        local_folder = output_path*order_folder
 	    #Note: assuming that output_path ends in '/'
 		  
 	if !isdir(output_path*order_folder)
@@ -103,84 +103,8 @@ function sample_motifs(matrix_file,output_path,orders,sample_counts)
 
 end
 
-# -- Routines for finding cliques from a matrix -- #
-
-function tensors_from_graph(A, orders::Array{Int,1}, sample_size::Int)
-
-
-    tensors = Array{SymTensorUnweighted,1}(undef,length(orders))
-
-    for (i,order) in enumerate(orders)
-        tensor = tensor_from_graph(A, order, sample_size)
-        tensors[i] = tensor
-    end
-
-    return tensors
-
-end
-
-function tensors_from_graph(A, orders::Array{Int,1}, sample_sizes::Array{Int,1})
-
-    @assert length(orders) == length(sample_sizes)
-    tensors = Array{SymTensorUnweighted,1}(undef,length(orders))
-
-    for (i,(order,sample)) in enumerate(zip(orders,sample_sizes))
-        if order == 2
-            tensors[i] = matrix_to_SymTensorUnweighted(A)
-        else
-            tensors[i] = tensor_from_graph(A, order, sample)
-        end
-    end
-
-    return tensors
-end
-
-function matrix_to_SymTensorUnweighted(A::SparseMatrixCSC{T,Int}) where T
-
-    n,m = size(A)
-    @assert n == m
-
-    is,js,_ = findnz(A)
-    edge_list = [[i,j] for (i,j) in zip(is,js)]
-    reduce_to_unique_motifs!(edge_list)
-
-    edges = Array{Int,2}(undef,2,length(edge_list))
-
-    for idx = 1:length(edge_list)
-        edges[:,idx] = edge_list[idx]
-    end
-
-    return SymTensorUnweighted(n,2,edges)
-    
-
-end
-
-function tensor_from_graph(A, order, t)
-
-    _, cliques::Array{Array{Int64,1},1} = TuranShadow(A,order,t)
-
-    reduce_to_unique_motifs!(cliques)
-
-    indices = zeros(order,length(cliques))
-    idx = 1
-    #n = -1
-    
-    for clique in cliques #is there a better way to do this? 
-        indices[:,idx] = clique
-        #n_c = maximum(clique)
-        #if n < n_c
-        #    n = n_c
-        #end
-        idx += 1;
-    end
-
-    
-    return SymTensorUnweighted(size(A,1),order,round.(Int,indices))
-
-end
-
 #TODO: 
-function reduce_to_unique_motifs!(cliques::Array{Array{T,1},1}) where {T <: Int}
+function reduce_to_unique_cliques!(cliques::Array{Array{T,1},1}) where {T <: Int}
 
     order = length(cliques[1])
 

@@ -3,7 +3,7 @@ using Suppressor
 
 using SparseArrays
 import Random:seed!
-import MatrixNetworks:erdos_renyi_undirected
+import MatrixNetworks:erdos_renyi_undirected, triangles
 import LinearAlgebra:norm
 
 
@@ -24,9 +24,14 @@ TOL= 1e-15
 A = sparse(erdos_renyi_undirected(n,.9999)) # use a small clique, 
                                 #   p=1.0 interprets as d_avg = 1
 A = max.(A,A')
+for i = 1:size(A,1)
+    A[i,i] = 0.0
+end
+dropzeros!(A)
 
 
-include("distributedTuranShadow_tests.jl")
+#include("distributedTuranShadow_tests.jl")
+include("tensorConstruction_tests.jl")
 include("contraction_tests.jl")
 
 

@@ -15,6 +15,7 @@ using CSV
 using Random
 
 using MatrixNetworks
+using LightGraphs
 using Distributed
 
 # -- contractions.jl -- #
@@ -31,6 +32,10 @@ struct SymTensorUnweighted
     indices::Array{Int,2}
 end
 
+abstract type Motif  end
+struct Clique <: Motif end
+struct Cycle <: Motif end
+
 #TODO: rethink naming
 
 #struct TensorComplexUnweighted
@@ -43,6 +48,7 @@ end
 #TENSOR_PATH = "/homes/ccolley/Documents/Research/TensorConstruction/tensors/"   #server
 
 include("fileio.jl")
+include("tensorConstruction.jl")
 include("distributedTuranShadow.jl")
 #include("communication.jl")
 include("contraction.jl")
@@ -50,10 +56,10 @@ include("contraction.jl")
 #TODO: move to Experiments.jl?
 
 export SymTensorUnweighted, TensorComplexUnweighted
+export Clique, Cycle 
 
 export tensor_from_graph, tensors_from_graph
 export load_SymTensorUnweighted
 export contraction_divide_out!, embedded_contraction!
-
 
 end #module end 
