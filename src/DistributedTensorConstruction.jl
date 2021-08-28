@@ -26,15 +26,21 @@ using Combinatorics:integer_partitions,permutations, multinomial
 
 #NOTE: keeping @pyimport currently triggers compilation error "ERROR: LoadError: Evaluation into the closed module `__anon__`..."
 
-struct SymTensorUnweighted
-    n::Int
-    order::Int
-    indices::Array{Int,2}
-end
+# struct SymTensorUnweighted
+#     n::Int
+#     order::Int
+#     indices::Array{Int,2}
+# end
 
 abstract type Motif  end
 struct Clique <: Motif end
 struct Cycle <: Motif end
+
+struct SymTensorUnweighted{T <: Motif}
+    n::Int
+    order::Int
+    indices::Array{Int,2}
+end
 
 #TODO: rethink naming
 
@@ -56,7 +62,7 @@ include("contraction.jl")
 #TODO: move to Experiments.jl?
 
 export SymTensorUnweighted, TensorComplexUnweighted
-export Clique, Cycle 
+export Motif, Clique, Cycle 
 
 export tensor_from_graph, tensors_from_graph
 export load_SymTensorUnweighted

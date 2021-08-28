@@ -1,8 +1,9 @@
-
-
+#
+#    Clique based contraction routines
+#
 
 #TODO: test
-function contraction!(A::SymTensorUnweighted, x::Array{Float64,1},y::Array{Float64,1})
+function contraction!(A::SymTensorUnweighted{Clique}, x::Array{Float64,1},y::Array{Float64,1})
 
     order, edges = size(A.indices)
 
@@ -25,8 +26,9 @@ function contraction!(A::SymTensorUnweighted, x::Array{Float64,1},y::Array{Float
     end
 end
 
+
 #TODO: test
-function contraction_divide_out!(A::SymTensorUnweighted, x::Array{Float64,1},y::Array{Float64,1})
+function contraction_divide_out!(A::SymTensorUnweighted{Clique}, x::Array{Float64,1},y::Array{Float64,1})
 
     order, edges = size(A.indices)
     scaling_factor = factorial(order-1)
@@ -43,7 +45,7 @@ function contraction_divide_out!(A::SymTensorUnweighted, x::Array{Float64,1},y::
     end
 end
 
-function contraction_divide_out!(simplicial_complexes::Array{SymTensorUnweighted,1},x, y)
+function contraction_divide_out!(simplicial_complexes::Array{SymTensorUnweighted{Clique},1},x, y)
     #assuming simplicial_complexes are sorted by their motif order
 
     for i=1:length(simplicial_complexes)
@@ -52,7 +54,7 @@ function contraction_divide_out!(simplicial_complexes::Array{SymTensorUnweighted
 end
 
 
-function embedded_contraction!(A::SymTensorUnweighted, x::Array{T,1},y::Array{T,1},embedded_mode::Int) where T
+function embedded_contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1},embedded_mode::Int) where T
 
     order,edges = size(A.indices)
     #@assert order == 3
@@ -76,6 +78,8 @@ function embedded_contraction!(A::SymTensorUnweighted, x::Array{T,1},y::Array{T,
         #push!(scaling_factors,row_factors)
     end
 
+    return partition, scaling_factors
+
     for idx =1:edges
 
         for idx2 =1:length(multiplicities)
@@ -97,7 +101,7 @@ function embedded_contraction!(A::SymTensorUnweighted, x::Array{T,1},y::Array{T,
     end
 end
 
-function embedded_contraction!(simplicial_complexes::Array{SymTensorUnweighted,1},x, y)
+function embedded_contraction!(simplicial_complexes::Array{SymTensorUnweighted{S},1},x, y) where {S <: Motif}
     #assuming simplicial_complexes are sorted by their motif order
 
     max_order = size(simplicial_complexes[end].indices,1)
@@ -112,3 +116,76 @@ function embedded_contraction!(simplicial_complexes::Array{SymTensorUnweighted,1
     end
 end
 
+
+#
+#    Cycle based contraction routines
+#
+
+function contraction!(A::SymTensorUnweighted{Cycle}, x::Array{Float64,1},y::Array{Float64,1})
+
+    order, edges = size(A.indices)
+
+    for i=1:edges
+        for j=1:order
+
+            val = 2 #for each orientation
+
+            for k=1:j-1
+                val *= x[A.indices[k,i]]
+            end
+
+            for k=j+1:order
+                val *= x[A.indices[k,i]]
+            end
+            y[A.indices[j,i]] += val
+        end
+    end
+end
+
+
+function embedded_contraction!(A::SymTensorUnweighted{Cycle}, x::Array{T,1},y::Array{T,1},embedded_mode::Int) where T
+
+    order,edges = size(A.indices)
+    #@assert order == 3
+
+    # compute contraction template
+    partition = [ x for x in integer_partitions(embedded_mode - order) if length(x) <= order]
+    #println(partition)
+    partition = [length(y) < order ? vcat(y,zeros(Int,order - length(y))) : y  for y in partition]
+                     #pad the entries to all have the same length
+    partition = [x .+= 1 for x in partition]
+    
+    multiplicities::Array{Array{Integer,1},1} = unique(hcat([collect(permutations(y)) for y in partition]...))
+
+    #=
+    scaling_factors = Array{Integer,2}(undef,order,length(multiplicities))
+    for i =1:length(multiplicities)
+        for j=1:order
+            row = copy(multiplicities[i])
+            row[j] -= 1
+            scaling_factors[j,i] = multinomial(row...)
+        end
+        #push!(scaling_factors,row_factors)
+    end
+    =#
+
+    for idx =1:edges
+
+        for idx2 =1:length(multiplicities)
+            for idx3 =1:order
+                val::Float64 = 2.0#scaling_factors[idx3,idx2]
+
+                for idx4=1:idx3-1
+                    val *= x[A.indices[idx4,idx]]^multiplicities[idx2][idx4]
+                end
+                val *= x[A.indices[idx3,idx]]^(multiplicities[idx2][idx3] -1)
+                for idx4=idx3+1:order
+                    val *= x[A.indices[idx4,idx]]^multiplicities[idx2][idx4]
+                end
+
+                y[A.indices[idx3,idx]] += val
+            end
+        end
+    
+    end
+end
