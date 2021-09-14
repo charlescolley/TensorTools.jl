@@ -31,6 +31,7 @@ dropzeros!(A)
 
 
 #include("distributedTuranShadow_tests.jl")
+include("fileio_tests.jl")
 include("tensorConstruction_tests.jl")
 include("contraction_tests.jl")
 

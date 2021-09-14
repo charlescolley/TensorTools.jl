@@ -81,7 +81,7 @@ function write_ssten(indices::Array{Int,2},n, filepath::String)
     close(file)
 end
 
-
+#TODO: add saving in binary flag, parse v_i
 function load_ssten(filepath,delimiter=' ')
 
 	#check path validity
@@ -125,11 +125,11 @@ function load_ssten(filepath,delimiter=' ')
     end
 end
 
-function load_SymTensorUnweighted(filepath,args...)
+function load_SymTensorUnweighted(filepath,motif::M=Clique(),args...) where {M <: Motif}
 
     indices, n = load_ssten(filepath,args...)
     #TODO: make this more robust
-    SymTensorUnweighted(n,size(indices,1),indices)
+    SymTensorUnweighted{M}(n,size(indices,1),indices)
 end
 
 #routine used for reading in edge files stored as .csv
