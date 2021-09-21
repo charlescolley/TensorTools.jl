@@ -191,3 +191,29 @@ function embedded_contraction!(A::SymTensorUnweighted{Cycle}, x::Array{T,1},y::A
 end
 
 
+
+#
+#  Duck Typed Allocators
+#
+
+function contraction(A, x::Array{T,1}) where T 
+
+    # using length of x rather than A.n to make more robust against different types of A 
+    y = zeros(T,length(x))
+    contraction!(A, x, y)
+    return y 
+end
+
+function embedded_contraction(A, x::Array{T,1}) where T 
+    # using length of x rather than A.n to make more robust against different types of A 
+    y = zeros(T,length(x))
+    embedded_contraction!(A, x, y)
+    return y 
+end
+
+function contraction_divide_out(A, x::Array{T,1}) where T 
+    # using length of x rather than A.n to make more robust against different types of A 
+    y = zeros(T,length(x))
+    contraction_divide_out!(A, x, y)
+    return y 
+end
