@@ -41,18 +41,12 @@ function tensor_from_graph(A, order, t, motif::Clique)
 
     indices = zeros(order,length(cliques))
     idx = 1
-    #n = -1
     
     for clique in cliques #is there a better way to do this? 
         indices[:,idx] = clique
-        #n_c = maximum(clique)
-        #if n < n_c
-        #    n = n_c
-        #end
         idx += 1;
     end
 
-    
     return SymTensorUnweighted{Clique}(size(A,1),order,round.(Int,indices))
 
 end
@@ -65,16 +59,17 @@ end
 function tensor_from_graph(A, order::Int, sample_size::Int, motif::Cycle)
 
     cycle_tensors = tensors_from_graph(A,order,sample_size,motif) 
-    return cycle_tensors[end]
+    return filter!(c-> c.order == order, cycle_tensors)
         # Johnson's algorithm returns many smaller cycles too, only return the requested ones
-
+        filter!(c-> c.order in orders, cycle_tensors)
 end
 
 function tensors_from_graph(A, orders::Array{Int,1}, sample_size::Int, motif::Cycle)
 
     cycle_tensors = tensors_from_graph(A, maximum(orders), sample_size, motif) 
-    return [cycle_tensors[order-1] for order in orders]
+    filter!(c-> c.order in orders, cycle_tensors)
         # Johnson's algorithm returns many smaller cycles too, only return the requested ones
+        # Assuming length(orders) is small. 
 
 end
 
@@ -117,19 +112,23 @@ function tensors_from_graph(A::SparseMatrixCSC{T,Int64}, max_length::Int,samples
 
 
 	#return IncidenceTensors
-	return [DistributedTensorConstruction.SymTensorUnweighted{Cycle}(size(A,1),l,IncidenceTensors[l]) for l in 2:max_length]
+	return [SymTensorUnweighted{Cycle}(size(A,1),l,IncidenceTensors[l]) for l in 2:max_length]
                                                                                                              #ignore the singleton node returned 
 end
 """
 
-function tensors_from_graph(A::SparseMatrixCSC{T,Int64}, max_length::Int,samples::Int,motif::Cycle) where T
+function tensors_from_graph(A::SparseMatrixCSC{T,Int64}, maxCycleLength::Int,samples::Int,motif::Cycle) where T
 
 	LG_A = LightGraphs.SimpleGraph(A)
 
-	cycles = simplecycles_limited_length(LG_A,max_length,samples)
+	cycles = simplecycles_limited_length(LG_A,maxCycleLength,samples)
+    if length(cycles) == 0 
+        return [SymTensorUnweighted{Cycle}(size(A,1),maxCycleLength,Array{T,2}(undef,maxCycleLength,0))]
+    end 
+
     sort!(cycles,by=c->length(c))
 
-    cycle_length_ptrs = ones(Int,max_length-1) #LightGraphs doesn't return anything len(c)==1
+    cycle_length_ptrs = ones(Int,maxCycleLength-1) #LightGraphs doesn't return anything len(c)==1
     l_prev = length(cycles[1])
     cl_ptr = 2 # we know cycles of len 2 start at 1
     for i = 2:length(cycles)
@@ -142,11 +141,11 @@ function tensors_from_graph(A::SparseMatrixCSC{T,Int64}, max_length::Int,samples
         end
     end
 
-    IncidenceTensors = Array{Array{Integer,2},1}(undef,max_length-1)
+    IncidenceTensors = Array{Array{Integer,2},1}(undef,maxCycleLength-1)
 
-    for l = 1:(max_length-1)
+    for l = 1:(maxCycleLength-1)
         
-        if l == (max_length-1)
+        if l == (maxCycleLength-1)
             sub_cycles = @view cycles[cycle_length_ptrs[l]:end]
         else
             sub_cycles = @view cycles[cycle_length_ptrs[l]:(cycle_length_ptrs[l+1]-1)]
@@ -155,8 +154,7 @@ function tensors_from_graph(A::SparseMatrixCSC{T,Int64}, max_length::Int,samples
         IncidenceTensors[l] = unique_cycles(sub_cycles)
     end
 
-    return [DistributedTensorConstruction.SymTensorUnweighted{Cycle}(size(A,1),size(IncidenceTensors[l],1),IncidenceTensors[l]) for l in 1:max_length-1]
-
+    return [SymTensorUnweighted{Cycle}(size(A,1),size(IncidenceTensors[l],1),IncidenceTensors[l]) for l in 1:maxCycleLength-1]
 
 end
 
@@ -175,8 +173,13 @@ function unique_cycles(cycles::AbstractVector{Vector{T}}) where T
             push!(hashes,hash)
         end
     end
+    
+    if length(cycles) == 0 
+        Incidence = Array{T,2}(undef,0,length(cycles_to_add))
+    else
+        Incidence = Array{T,2}(undef,length(cycles[1]),length(cycles_to_add))
+    end
 
-    Incidence = Array{T,2}(undef,length(cycles[1]),length(cycles_to_add))
     head = 1
     for cycle_idx in cycles_to_add
         Incidence[:,head] = cycles[cycle_idx]

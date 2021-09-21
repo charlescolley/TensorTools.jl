@@ -106,6 +106,9 @@ end
 #TODO: 
 function reduce_to_unique_cliques!(cliques::Array{Array{T,1},1}) where {T <: Int}
 
+    if length(cliques) < 2 
+        return
+    end
     order = length(cliques[1])
 
     for i = 1:length(cliques)
