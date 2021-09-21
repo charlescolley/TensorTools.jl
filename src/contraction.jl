@@ -3,7 +3,7 @@
 #
 
 #TODO: test
-function contraction!(A::SymTensorUnweighted{Clique}, x::Array{Float64,1},y::Array{Float64,1})
+function contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1}) where T 
 
     order, edges = size(A.indices)
 
@@ -28,7 +28,7 @@ end
 
 
 #TODO: test
-function contraction_divide_out!(A::SymTensorUnweighted{Clique}, x::Array{Float64,1},y::Array{Float64,1})
+function contraction_divide_out!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1}) where T 
 
     order, edges = size(A.indices)
     scaling_factor = factorial(order-1)
@@ -121,7 +121,7 @@ end
 #    Cycle based contraction routines
 #
 
-function contraction!(A::SymTensorUnweighted{Cycle}, x::Array{Float64,1},y::Array{Float64,1})
+function contraction!(A::SymTensorUnweighted{Cycle}, x::Array{T,1},y::Array{T,1}) where T
 
     order, edges = size(A.indices)
 
@@ -189,3 +189,5 @@ function embedded_contraction!(A::SymTensorUnweighted{Cycle}, x::Array{T,1},y::A
     
     end
 end
+
+

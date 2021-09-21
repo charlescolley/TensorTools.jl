@@ -66,6 +66,6 @@ export Motif, Clique, Cycle
 
 export tensor_from_graph, tensors_from_graph
 export load_SymTensorUnweighted
-export contraction_divide_out!, embedded_contraction!
+export contraction_divide_out!, embedded_contraction!, contraction!
 
 end #module end 
