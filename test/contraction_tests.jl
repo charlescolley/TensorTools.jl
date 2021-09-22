@@ -2,21 +2,26 @@
 include("hard_coded_contractions.jl")
 
 
-    
-
 @testset "Type Stability" begin
 
     orders = [3,4]
-    tensors = tensors_from_graph(A,orders,1000,Clique())
-    
+    clique_tensors = tensors_from_graph(A,orders,1000,Clique())
+    cycle_tensors = tensors_from_graph(A,orders,100000,Cycle())
+
     x  = ones(n)
-    y_divide_out = zeros(n)
-    y_naive = zeros(n)
     y = zeros(n)
 
-    @inferred DTC.contraction_divide_out!(tensors[end],x,y_divide_out)
-    @inferred DTC.contraction!(tensors[end],x,y_naive)
-    @inferred DTC.embedded_contraction!(tensors[1], x,y,4)
+    #NOTE: testing allocating functions higher level functions stability depends on ! versions
+
+    @inferred contraction_divide_out(clique_tensors[end],x)
+    @inferred contraction(clique_tensors[end],x)
+    #@inferred embedded_contraction(clique_tensors, x)
+    @inferred embedded_contraction!(clique_tensors[1], x,y,4)
+        
+
+    #@inferred DTC.contraction_divide_out!(cycle_tensors[end],x,y_divide_out)
+    @inferred contraction(cycle_tensors[end],x)
+    @inferred embedded_contraction!(cycle_tensors[1], x,y,4)
 
 end
 
