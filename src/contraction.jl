@@ -60,15 +60,15 @@ function embedded_contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::
     #@assert order == 3
 
     # compute contraction template
-    partition = [ x for x in integer_partitions(embedded_mode - order) if length(x) <= order]
+    partition::Vector{Vector{Int}} = [ x for x in integer_partitions(embedded_mode - order) if length(x) <= order]
     #println(partition)
     partition = [length(y) < order ? vcat(y,zeros(Int,order - length(y))) : y  for y in partition]
                      #pad the entries to all have the same length
     partition = [x .+= 1 for x in partition]
     
-    multiplicities::Array{Array{Integer,1},1} = unique(hcat([collect(permutations(y)) for y in partition]...))
+    multiplicities::Array{Array{Int,1},1} = unique(hcat([collect(permutations(y)) for y in partition]...))
 
-    scaling_factors = Array{Integer,2}(undef,order,length(multiplicities))
+    scaling_factors = Array{Int,2}(undef,order,length(multiplicities))
     for i =1:length(multiplicities)
         for j=1:order
             row = copy(multiplicities[i])
@@ -78,7 +78,7 @@ function embedded_contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::
         #push!(scaling_factors,row_factors)
     end
 
-    return partition, scaling_factors
+    #return partition, scaling_factors
 
     for idx =1:edges
 
