@@ -51,6 +51,96 @@ function tensor_from_graph(A, order, t, motif::Clique)
 
 end
 
+function tensor_from_graph(A, order::Int, motif::Clique;max_samples=10^9,verbose=false)
+
+    t = 10000
+
+    all_cliques = Array{Array{Int64,1},1}(undef,0)
+    prev_motif_count = 0
+    used_samples = 0
+    while t < max_samples
+
+        _, cliques::Array{Array{Int64,1},1} = TuranShadow(A,order,t)
+        used_samples += t
+
+        append!(all_cliques,cliques)
+        reduce_to_unique_cliques!(all_cliques)
+
+        if length(all_cliques) == prev_motif_count
+            break 
+        else
+            prev_motif_count =  length(all_cliques)
+            t *= 2 
+        end
+    end
+
+
+    indices = zeros(order,length(all_cliques))
+    idx = 1
+    
+    for clique in all_cliques #is there a better way to do this? 
+        indices[:,idx] = clique
+        idx += 1;
+    end
+
+    return SymTensorUnweighted{Clique}(size(A,1),order,round.(Int,indices))
+
+end
+
+function tensor_from_graph_profiled(A, order::Int, motif::Clique;max_samples=10^9,verbose=false)
+
+    t = 10000
+
+    profiling = Dict([
+        ("motif_count",[]),
+        ("samples",[]),
+        ("reduction_rt",[]),
+        ("TuranShadow_rt",[]),
+        ("append!_rt",[]),
+    ])
+
+    all_cliques = Array{Array{Int64,1},1}(undef,0)
+    prev_motif_count = 0
+    used_samples = 0
+    while t < max_samples
+
+        push!(profiling["samples"],t)
+        (_, cliques::Array{Array{Int64,1},1}),rt = @timed TuranShadow(A,order,t)
+        push!(profiling["TuranShadow_rt"],rt)
+
+        used_samples += t
+        _,rt = @timed append!(all_cliques,cliques)
+        push!(profiling["append!_rt"],rt)
+
+        _,rt = @timed reduce_to_unique_cliques!(all_cliques)
+        push!(profiling["reduction_rt"],rt)
+
+        push!(profiling["motif_count"],length(all_cliques))
+
+
+        iter_rt = profiling["reduction_rt"][end] + profiling["append!_rt"][end] + profiling["TuranShadow_rt"][end]
+        if length(all_cliques) == prev_motif_count
+            println("found $(prev_motif_count) motifs using $(t) samples in $iter_rt (s)")
+            break 
+        else
+            prev_motif_count =  length(all_cliques)
+            println("found $(prev_motif_count) motifs using $(t) samples in $iter_rt (s)")
+            t *= 2 
+        end
+    end
+
+
+    indices = zeros(order,length(all_cliques))
+    idx = 1
+    
+    for clique in all_cliques #is there a better way to do this? 
+        indices[:,idx] = clique
+        idx += 1;
+    end
+
+    return SymTensorUnweighted{Clique}(size(A,1),order,round.(Int,indices)), profiling
+
+end
 
 #
 #    Cycle Motif Routines

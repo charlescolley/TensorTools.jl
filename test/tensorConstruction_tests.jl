@@ -1,3 +1,5 @@
+
+import DistributedTensorConstruction: tensor_from_graph_profiled
 @testset "Motif Sampling" begin
 
     _, cliques::Array{Array{Int64,1},1} = DTC.TuranShadow(A,order,trials)
@@ -48,9 +50,13 @@
 
     @testset "matrix Contructors" begin
 
-        @inferred tensor_from_graph(A, clique_size, trials,Clique())
-        @inferred tensor_from_graph(A, clique_size, 0,Clique())
+        @inferred tensor_from_graph(A, clique_size, trials, Clique())
+        @inferred tensor_from_graph(A, clique_size, 0, Clique())
 
+        @inferred tensor_from_graph(A, clique_size, Clique())
+        @suppress begin
+            @inferred tensor_from_graph_profiled(A, clique_size, Clique())
+        end
         @inferred tensors_from_graph(A, [3,4], trials,Clique())
         @inferred tensors_from_graph(A, [3,4], [1000,10000],Clique())
         @inferred tensors_from_graph(A, [3,4], 0,Clique())
