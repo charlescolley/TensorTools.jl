@@ -53,6 +53,81 @@ function contraction_divide_out!(simplicial_complexes::Array{SymTensorUnweighted
     end
 end
 
+function contract_to_mat(A_ten::SymTensorUnweighted{Clique},x::Array{T}) where T
+
+    scaling_factor = factorial(A_ten.order-2)
+    binom_factor = binomial(A_ten.order,A_ten.order-2)
+    is = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
+    js = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
+    vs = Array{T}(undef, binom_factor*size(A_ten.indices, 2))
+
+    new_edge_idx = 1 
+
+    for edge_idx = 1:size(A_ten.indices,2)
+
+        for i in 1:size(A_ten.indices,1)
+            for j = i + 1: size(A_ten.indices,1)
+                val = scaling_factor;
+                for k = 1:size(A_ten.indices,1)
+                    if k != i && k != j 
+                        val *= x[A_ten.indices[k,edge_idx]]
+                    end
+                end
+
+                is[new_edge_idx] = A_ten.indices[i,edge_idx]    
+                js[new_edge_idx] = A_ten.indices[j,edge_idx]
+                vs[new_edge_idx] = val
+                new_edge_idx  += 1
+            end
+
+        end
+    
+    end 
+    A = sparse(is,js,vs,A_ten.n,A_ten.n)
+    return A + A' 
+        # expecting diag(A) = \vec{0}
+end
+
+function contract_to_mat_divide_out(A_ten::SymTensorUnweighted{Clique},x::Array{T}) where T
+
+    scaling_factor = factorial(A_ten.order-2)
+    binom_factor = binomial(A_ten.order,A_ten.order-2)
+
+    is = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
+    js = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
+    vs = Array{T}(undef, binom_factor*size(A_ten.indices, 2))
+
+    new_edge_idx = 1 
+
+    for edge_idx = 1:size(A_ten.indices,2)
+
+        val = scaling_factor;
+        for i = 1:size(A_ten.indices,1)
+            val *= x[A_ten.indices[i,edge_idx]]
+        end
+        #val = A->vals[i]*scaling_factor;
+
+        for i in 1:size(A_ten.indices,1)
+            val /= x[A_ten.indices[i,edge_idx]]
+            for j = i + 1: size(A_ten.indices,1)
+                val /= x[A_ten.indices[j,edge_idx]]
+
+                is[new_edge_idx] = A_ten.indices[i,edge_idx]    
+                js[new_edge_idx] = A_ten.indices[j,edge_idx]
+                vs[new_edge_idx] = val
+                new_edge_idx  += 1
+
+                val *= x[A_ten.indices[j,edge_idx]]
+
+            end
+            val *= x[A_ten.indices[i,edge_idx]]
+        end
+    end 
+    A = sparse(is,js,vs,A_ten.n,A_ten.n)
+    return A + A' 
+        # expecting diag(A) = \vec{0}
+end
+
 
 function embedded_contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1},embedded_mode::Int) where T
 
@@ -115,6 +190,7 @@ function embedded_contraction!(simplicial_complexes::Array{SymTensorUnweighted{S
         end
     end
 end
+
 
 
 #

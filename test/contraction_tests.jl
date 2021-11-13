@@ -17,11 +17,14 @@ include("hard_coded_contractions.jl")
     @inferred contraction(clique_tensors[end],x)
     #@inferred embedded_contraction(clique_tensors, x)
     @inferred embedded_contraction!(clique_tensors[1], x,y,4)
-        
+    @inferred contract_to_mat(clique_tensors[end],x)
+    @inferred contract_to_mat_divide_out(clique_tensors[end],x)
 
     #@inferred DTC.contraction_divide_out!(cycle_tensors[end],x,y_divide_out)
     @inferred contraction(cycle_tensors[end],x)
     @inferred embedded_contraction!(cycle_tensors[1], x,y,4)
+
+    
 
 end
 
@@ -65,6 +68,19 @@ end
         DTC.contraction_divide_out!(tensors[1], x2,y)
         @test norm(y - y_hc)/norm(y) < TOL
     end
+
+    @testset "contract to mat" begin 
+
+        A = contract_to_mat(tensors[1],x)
+        B = contract_to_mat_divide_out(tensors[1],x)
+
+        @test norm(A - B)/norm(A) < TOL 
+
+        # check vector contraction code coincides
+        y = contraction(tensors[1],x)
+        @test norm(y - A*x)/norm(y) < TOL 
+
+    end  
 
     @testset "embedded contractions" begin 
         y_hc = zeros(n)
