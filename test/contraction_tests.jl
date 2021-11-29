@@ -5,24 +5,31 @@ include("hard_coded_contractions.jl")
 @testset "Type Stability" begin
 
     orders = [3,4]
-    clique_tensors = tensors_from_graph(A,orders,1000,Clique())
-    cycle_tensors = tensors_from_graph(A,orders,100000,Cycle())
+    clique_unweighted_tensors = tensors_from_graph(A,orders,1000,Clique())
+    cycle_unweighted_tensors = tensors_from_graph(A,orders,100000,Cycle())
+    clique_weighted_tensors = [SymTensor{Clique}(A_ten.n,A_ten.order,A_ten.indices,ones(size(A_ten.indices,2))) for A_ten in clique_unweighted_tensors]
 
     x  = ones(n)
     y = zeros(n)
 
     #NOTE: testing allocating functions higher level functions stability depends on ! versions
 
-    @inferred contraction_divide_out(clique_tensors[end],x)
-    @inferred contraction(clique_tensors[end],x)
+    @inferred contraction_divide_out(clique_unweighted_tensors[end],x)
+    @inferred contraction_divide_out(clique_weighted_tensors[end],x)
+    @inferred contraction(clique_unweighted_tensors[end],x)
+    @inferred contraction(clique_weighted_tensors[end],x)
+
     #@inferred embedded_contraction(clique_tensors, x)
-    @inferred embedded_contraction!(clique_tensors[1], x,y,4)
-    @inferred contract_to_mat(clique_tensors[end],x)
-    @inferred contract_to_mat_divide_out(clique_tensors[end],x)
+    @inferred embedded_contraction!(clique_unweighted_tensors[1], x,y,4)
+
+    @inferred contract_to_mat(clique_unweighted_tensors[end],x)
+    @inferred contract_to_mat(clique_weighted_tensors[end],x)
+    @inferred contract_to_mat_divide_out(clique_unweighted_tensors[end],x)
+    @inferred contract_to_mat_divide_out(clique_weighted_tensors[end],x)
 
     #@inferred DTC.contraction_divide_out!(cycle_tensors[end],x,y_divide_out)
-    @inferred contraction(cycle_tensors[end],x)
-    @inferred embedded_contraction!(cycle_tensors[1], x,y,4)
+    @inferred contraction(cycle_unweighted_tensors[end],x)
+    @inferred embedded_contraction!(cycle_unweighted_tensors[1], x,y,4)
 
     
 
@@ -31,54 +38,100 @@ end
 @testset "Contraction Comparisons" begin 
 
     orders = [3,4,5]
-    tensors = tensors_from_graph(A,orders,1000,Clique())
-    
+    unweighted_tensors = tensors_from_graph(A,orders,1000,Clique())
+    const_weighted_tensors = [SymTensor{Clique}(A_ten.n,A_ten.order,A_ten.indices,ones(size(A_ten.indices,2))) for A_ten in unweighted_tensors]
+    rand_weighted_tensors = [SymTensor{Clique}(A_ten.n,A_ten.order,A_ten.indices,rand(size(A_ten.indices,2))) for A_ten in unweighted_tensors]
     x  = ones(n)
     x2 = rand(n)
     
     @testset "single tensor contractions" begin 
-        for tensor in tensors
-            y_naive = zeros(n)
-            y_divide_out = zeros(n)
+        for tensors in [const_weighted_tensors, unweighted_tensors]
+            for tensor in tensors
+                y_naive = zeros(n)
+                y_divide_out = zeros(n)
 
-            DTC.contraction_divide_out!(tensor,x,y_divide_out)
-            DTC.contraction!(tensor,x,y_naive)
+                DTC.contraction_divide_out!(tensor,x,y_divide_out)
+                DTC.contraction!(tensor,x,y_naive)
 
-            @test norm(y_divide_out - y_naive)/norm(y_divide_out) < TOL
+                @test norm(y_divide_out - y_naive)/norm(y_divide_out) < TOL
 
-            y_naive = zeros(n)
-            y_divide_out = zeros(n)
-            DTC.contraction_divide_out!(tensor,x2,y_divide_out)
-            DTC.contraction!(tensor,x2,y_naive)
-            @test norm(y_divide_out - y_naive)/norm(y_divide_out) < TOL
+                y_naive = zeros(n)
+                y_divide_out = zeros(n)
+                DTC.contraction_divide_out!(tensor,x2,y_divide_out)
+                DTC.contraction!(tensor,x2,y_naive)
+                @test norm(y_divide_out - y_naive)/norm(y_divide_out) < TOL
+            end
         end
     end
 
-    @testset "hard coded contractions" begin 
+    @testset "hard coded unweighted contractions" begin 
 
         y_hc = zeros(n)
         y = zeros(n)
-        third_order_contraction!(tensors[1].indices, x,y_hc)
-        DTC.contraction_divide_out!(tensors[1], x,y)
+        third_order_contraction!(unweighted_tensors[1].indices, x,y_hc)
+        DTC.contraction_divide_out!(unweighted_tensors[1], x,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
-        third_order_contraction!(tensors[1].indices, x2,y_hc)
-        DTC.contraction_divide_out!(tensors[1], x2,y)
+        fourth_order_contraction!(unweighted_tensors[2].indices, x,y_hc)
+        DTC.contraction_divide_out!(unweighted_tensors[2], x,y)
         @test norm(y - y_hc)/norm(y) < TOL
+
+        y_hc = zeros(n)
+        y = zeros(n)
+        third_order_contraction!(unweighted_tensors[1].indices, x2,y_hc)
+        DTC.contraction_divide_out!(unweighted_tensors[1], x2,y)
+        @test norm(y - y_hc)/norm(y) < TOL
+
+        y_hc = zeros(n)
+        y = zeros(n)
+        fourth_order_contraction!(unweighted_tensors[2].indices, x2,y_hc)
+        DTC.contraction_divide_out!(unweighted_tensors[2], x2,y)
+        @test norm(y - y_hc)/norm(y) < TOL
+
+    end
+
+    @testset "hard coded weighted contractions" begin 
+
+        y_hc = zeros(n)
+        y = zeros(n)
+        third_order_contraction!(rand_weighted_tensors[1].indices,rand_weighted_tensors[1].weights, x,y_hc)
+        DTC.contraction_divide_out!(rand_weighted_tensors[1], x,y)
+        @test norm(y - y_hc)/norm(y) < TOL
+
+        y_hc = zeros(n)
+        y = zeros(n)
+        fourth_order_contraction!(rand_weighted_tensors[2].indices,rand_weighted_tensors[2].weights, x,y_hc)
+        DTC.contraction_divide_out!(rand_weighted_tensors[2], x,y)
+        @test norm(y - y_hc)/norm(y) < TOL
+
+        y_hc = zeros(n)
+        y = zeros(n)
+        third_order_contraction!(rand_weighted_tensors[1].indices,rand_weighted_tensors[1].weights, x2,y_hc)
+        DTC.contraction_divide_out!(rand_weighted_tensors[1], x2,y)
+        @test norm(y - y_hc)/norm(y) < TOL
+
+        y_hc = zeros(n)
+        y = zeros(n)
+        fourth_order_contraction!(rand_weighted_tensors[2].indices,rand_weighted_tensors[2].weights, x2,y_hc)
+        DTC.contraction_divide_out!(rand_weighted_tensors[2], x2,y)
+        @test norm(y - y_hc)/norm(y) < TOL
+
     end
 
     @testset "contract to mat" begin 
 
-        A = contract_to_mat(tensors[1],x)
-        B = contract_to_mat_divide_out(tensors[1],x)
+        for tensor in [unweighted_tensors[1],const_weighted_tensors[1]]
+            A = contract_to_mat(tensor,x)
+            B = contract_to_mat_divide_out(tensor,x)
 
-        @test norm(A - B)/norm(A) < TOL 
+            @test norm(A - B)/norm(A) < TOL 
 
-        # check vector contraction code coincides
-        y = contraction(tensors[1],x)
-        @test norm(y - A*x)/norm(y) < TOL 
+            # check vector contraction code coincides
+            y = contraction(tensor,x)
+            @test norm(y - A*x)/norm(y) < TOL 
+        end
 
     end  
 
@@ -86,15 +139,15 @@ end
         y_hc = zeros(n)
         y = zeros(n)
 
-        DTC.embedded_contraction!(tensors[1], x,y,4)
-        third_order_encoded_into_fourth_order_contraction!(tensors[1].indices,x,y_hc)
+        DTC.embedded_contraction!(unweighted_tensors[1], x,y,4)
+        third_order_encoded_into_fourth_order_contraction!(unweighted_tensors[1].indices,x,y_hc)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
 
-        DTC.embedded_contraction!(tensors[1], x2,y,4)
-        third_order_encoded_into_fourth_order_contraction!(tensors[1].indices,x2,y_hc)
+        DTC.embedded_contraction!(unweighted_tensors[1], x2,y,4)
+        third_order_encoded_into_fourth_order_contraction!(unweighted_tensors[1].indices,x2,y_hc)
         @test norm(y - y_hc)/norm(y) < TOL
     end
 
@@ -103,16 +156,16 @@ end
         y_hc = zeros(n)
         y = zeros(n)
 
-        contract_multi_motif_tensor!(tensors[1].indices, tensors[2].indices,x,y_hc)
-        DTC.contraction_divide_out!(tensors[1:2],x,y)
+        contract_multi_motif_tensor!(unweighted_tensors[1].indices, unweighted_tensors[2].indices,x,y_hc)
+        DTC.contraction_divide_out!(unweighted_tensors[1:2],x,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
 
         y_hc = zeros(n)
         y = zeros(n)
 
-        contract_multi_motif_tensor!(tensors[1].indices, tensors[2].indices,x2,y_hc)
-        DTC.contraction_divide_out!(tensors[1:2],x2,y)
+        contract_multi_motif_tensor!(unweighted_tensors[1].indices, unweighted_tensors[2].indices,x2,y_hc)
+        DTC.contraction_divide_out!(unweighted_tensors[1:2],x2,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
     end

@@ -42,6 +42,14 @@ struct SymTensorUnweighted{T <: Motif}
     indices::Array{Int,2}
 end
 
+struct SymTensor{T <: Motif,S}
+    n::Int
+    order::Int
+    indices::Matrix{Int}
+    weights::Vector{S}
+    SymTensor{T}(n::Int,order::Int,indices::Matrix{Int},weights::Vector{S}) where {T<:Motif,S} = new{T,S}(n,order,indices,weights)
+end
+
 #TODO: rethink naming
 
 #struct TensorComplexUnweighted
@@ -61,7 +69,7 @@ include("contraction.jl")
 
 #TODO: move to Experiments.jl?
 
-export SymTensorUnweighted, TensorComplexUnweighted
+export SymTensorUnweighted, SymTensor , TensorComplexUnweighted
 export Motif, Clique, Cycle 
 
 export tensor_from_graph, tensors_from_graph

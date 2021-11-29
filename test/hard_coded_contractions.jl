@@ -67,6 +67,25 @@ function third_order_contraction!(indices::Array{Int,2}, x::Array{T,1},y::Array{
 
 end
 
+function third_order_contraction!(indices::Array{Int,2},weights::Array{T,1}, x::Array{T,1},y::Array{T,1}) where T
+
+    #TODO: needs more robust testing. 
+    #      seems to work on small examples compared to Tensor Toolbox
+
+    order,nnz= size(indices)
+    @assert order == 3
+
+    #
+    for idx=1:nnz
+        i,j,k = indices[:,idx]
+
+        y[i] += 2*x[j]*x[k]*weights[idx]
+        y[j] += 2*x[i]*x[k]*weights[idx]
+        y[k] += 2*x[i]*x[j]*weights[idx]
+    end
+
+end
+
 #Assuming that y is zeroed out and that weight on edges is 1. 
 function fourth_order_contraction!(indices::Array{Int,2}, x::Array{T,1},y::Array{T,1}) where T
 
@@ -84,6 +103,27 @@ function fourth_order_contraction!(indices::Array{Int,2}, x::Array{T,1},y::Array
         y[j] += 6*x[i]*x[k]*x[l]
         y[k] += 6*x[i]*x[j]*x[l]
         y[l] += 6*x[i]*x[j]*x[k]
+
+    end
+
+end
+
+function fourth_order_contraction!(indices::Array{Int,2},weights::Array{T,1}, x::Array{T,1},y::Array{T,1}) where T
+
+    #TODO: needs more robust testing. 
+    #      seems to work on small examples compared to Tensor Toolbox
+
+    order,nnz= size(indices)
+    @assert order == 4
+
+    #
+    for idx=1:nnz
+        i,j,k,l = indices[:,idx]
+
+        y[i] += 6*x[j]*x[k]*x[l]*weights[idx]
+        y[j] += 6*x[i]*x[k]*x[l]*weights[idx]
+        y[k] += 6*x[i]*x[j]*x[l]*weights[idx]
+        y[l] += 6*x[i]*x[j]*x[k]*weights[idx]
 
     end
 

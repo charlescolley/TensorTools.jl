@@ -26,6 +26,30 @@ function contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1
     end
 end
 
+function contraction!(A::SymTensor{Clique}, x::Array{T,1},y::Array{T,1}) where T 
+
+    order, edges = size(A.indices)
+
+    scaling_factor = factorial(order-1)
+
+    for i=1:edges
+        for j=1:order
+
+            val = scaling_factor*A.weights[i]
+
+            for k=1:j-1
+                val *= x[A.indices[k,i]]
+            end
+
+            for k=j+1:order
+                val *= x[A.indices[k,i]]
+            end
+            y[A.indices[j,i]] += val
+        end
+    end
+end
+
+
 
 #TODO: test
 function contraction_divide_out!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1}) where T 
@@ -45,7 +69,24 @@ function contraction_divide_out!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y
     end
 end
 
-function contraction_divide_out!(simplicial_complexes::Array{SymTensorUnweighted{Clique},1},x, y)
+function contraction_divide_out!(A::SymTensor{Clique}, x::Array{T,1},y::Array{T,1}) where T 
+
+    order, edges = size(A.indices)
+    scaling_factor = factorial(order-1)
+
+    for i=1:edges
+        val = scaling_factor*A.weights[i]
+        for j=1:order
+            val *= x[A.indices[j,i]]
+        end
+
+        for j=1:order
+            y[A.indices[j,i]] += (val/x[A.indices[j,i]])
+        end
+    end
+end
+
+function contraction_divide_out!(simplicial_complexes::Union{Vector{SymTensorUnweighted{Clique}},Vector{SymTensor{Clique}}},x, y)
     #assuming simplicial_complexes are sorted by their motif order
 
     for i=1:length(simplicial_complexes)
@@ -88,6 +129,41 @@ function contract_to_mat(A_ten::SymTensorUnweighted{Clique},x::Array{T}) where T
         # expecting diag(A) = \vec{0}
 end
 
+function contract_to_mat(A_ten::SymTensor{Clique},x::Array{T}) where T
+
+    scaling_factor = factorial(A_ten.order-2)
+    binom_factor = binomial(A_ten.order,A_ten.order-2)
+    is = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
+    js = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
+    vs = Array{T}(undef, binom_factor*size(A_ten.indices, 2))
+
+    new_edge_idx = 1 
+
+    for edge_idx = 1:size(A_ten.indices,2)
+
+        for i in 1:size(A_ten.indices,1)
+            for j = i + 1: size(A_ten.indices,1)
+                val = scaling_factor*A_ten.weights[edge_idx];
+                for k = 1:size(A_ten.indices,1)
+                    if k != i && k != j 
+                        val *= x[A_ten.indices[k,edge_idx]]
+                    end
+                end
+
+                is[new_edge_idx] = A_ten.indices[i,edge_idx]    
+                js[new_edge_idx] = A_ten.indices[j,edge_idx]
+                vs[new_edge_idx] = val
+                new_edge_idx  += 1
+            end
+
+        end
+    
+    end 
+    A = sparse(is,js,vs,A_ten.n,A_ten.n)
+    return A + A' 
+        # expecting diag(A) = \vec{0}
+end
+
 function contract_to_mat_divide_out(A_ten::SymTensorUnweighted{Clique},x::Array{T}) where T
 
     scaling_factor = factorial(A_ten.order-2)
@@ -102,6 +178,46 @@ function contract_to_mat_divide_out(A_ten::SymTensorUnweighted{Clique},x::Array{
     for edge_idx = 1:size(A_ten.indices,2)
 
         val = scaling_factor;
+        for i = 1:size(A_ten.indices,1)
+            val *= x[A_ten.indices[i,edge_idx]]
+        end
+        #val = A->vals[i]*scaling_factor;
+
+        for i in 1:size(A_ten.indices,1)
+            val /= x[A_ten.indices[i,edge_idx]]
+            for j = i + 1: size(A_ten.indices,1)
+                val /= x[A_ten.indices[j,edge_idx]]
+
+                is[new_edge_idx] = A_ten.indices[i,edge_idx]    
+                js[new_edge_idx] = A_ten.indices[j,edge_idx]
+                vs[new_edge_idx] = val
+                new_edge_idx  += 1
+
+                val *= x[A_ten.indices[j,edge_idx]]
+
+            end
+            val *= x[A_ten.indices[i,edge_idx]]
+        end
+    end 
+    A = sparse(is,js,vs,A_ten.n,A_ten.n)
+    return A + A' 
+        # expecting diag(A) = \vec{0}
+end
+
+function contract_to_mat_divide_out(A_ten::SymTensor{Clique},x::Array{T}) where T
+
+    scaling_factor = factorial(A_ten.order-2)
+    binom_factor = binomial(A_ten.order,A_ten.order-2)
+
+    is = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
+    js = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
+    vs = Array{T}(undef, binom_factor*size(A_ten.indices, 2))
+
+    new_edge_idx = 1 
+
+    for edge_idx = 1:size(A_ten.indices,2)
+
+        val = scaling_factor*A_ten.weights[edge_idx];
         for i = 1:size(A_ten.indices,1)
             val *= x[A_ten.indices[i,edge_idx]]
         end
