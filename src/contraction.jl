@@ -244,6 +244,116 @@ function contract_to_mat_divide_out(A_ten::SymTensor{Clique},x::Array{T}) where 
         # expecting diag(A) = \vec{0}
 end
 
+function single_mode_ttv(A::SymTensorUnweighted{Clique},x::Vector{T}) where T
+    #=
+        Only computes a contraction for a single mode. Helpful for low rank 
+        contraction. This version uses vector version of subedges to make it 
+        easier to sort values.
+    =#
+    @assert A.n == length(x)
+
+    edge_count = size(A.indices,2)
+    #new_subedges = Array{Int,2}(undef,A.order-1,edge_count*A.order)
+    new_subedges = Array{Tuple{Vector{Int},T},1}(undef,edge_count*A.order)
+
+    
+    #new_subedge_weights = Array{Int,1}(undef,edge_count*A.order)
+    sub_edges_idx = 1
+
+    free_mode_pattern = collect(combinations(1:A.order, A.order-1))
+    contracted_mode_pattern = collect(A.order:-1:1)
+
+    for edge_idx in 1:size(A.indices,2)
+        subedge_offset = (edge_idx -1)*A.order
+        for j in 1:A.order
+
+            nodes_to_touch = free_mode_pattern[j]
+            new_edge = Array{Int,1}(undef,A.order-1)
+            for k in 1:A.order-1
+                new_edge[k] = A.indices[nodes_to_touch[k],edge_idx]
+            end
+            new_subedges[subedge_offset + j] = (new_edge,x[A.indices[contracted_mode_pattern[j],edge_idx]])
+        end
+    end
+
+    indices, weights = reduce_to_unique_edges(new_subedges)
+    return SymTensor{Clique}(A.n,A.order-1,indices,weights)
+end
+
+function single_mode_ttv(A::SymTensor{Clique},x::Vector{T}) where T
+    #=
+        Only computes a contraction for a single mode. Helpful for low rank 
+        contraction. This version uses vector version of subedges to make it 
+        easier to sort values.
+    =#
+    @assert A.n == length(x)
+
+    edge_count = size(A.indices,2)
+    new_subedges = Array{Tuple{Vector{Int},T},1}(undef,edge_count*A.order)
+
+    free_mode_pattern = collect(combinations(1:A.order, A.order-1))
+    contracted_mode_pattern = collect(A.order:-1:1)
+
+    for edge_idx in 1:size(A.indices,2)
+        subedge_offset = (edge_idx -1)*A.order
+        for j in 1:A.order
+
+            nodes_to_touch = free_mode_pattern[j]
+            new_edge = Array{Int,1}(undef,A.order-1)
+            for k in 1:A.order-1
+                new_edge[k] = A.indices[nodes_to_touch[k],edge_idx]
+            end
+            new_weight = x[A.indices[contracted_mode_pattern[j],edge_idx]]*A.weights[edge_idx]
+            new_subedges[subedge_offset + j] = (new_edge,new_weight)
+        end
+    end
+
+    indices, weights = reduce_to_unique_edges(new_subedges)
+    return SymTensor{Clique}(A.n,A.order-1,indices,weights)
+end
+
+function reduce_to_unique_edges(new_subedges::Vector{Tuple{Vector{Int},T}}) where T 
+    #assuming that new_subedges has at least 1 entry
+    sort!(new_subedges,by=i->i[1])
+
+
+    start_ptr = 1 
+    consolidated_indices = Array{Int,2}(undef,length(new_subedges[1][1]),length(new_subedges))
+    consolidated_weights = Array{T,1}(undef,length(new_subedges))
+    idx = 1
+    while start_ptr < length(new_subedges)
+
+        (edge,weight) = new_subedges[start_ptr]
+        consolidated_indices[:,idx] = edge
+        consolidated_weights[idx] = weight
+
+        # aggregate the edge weights together 
+        edge_check_ptr = start_ptr + 1
+
+        while new_subedges[edge_check_ptr][1] == edge
+            consolidated_weights[idx] += new_subedges[edge_check_ptr][2]
+            edge_check_ptr += 1          
+            if edge_check_ptr > length(new_subedges)
+                break
+            end
+        end
+
+        start_ptr = edge_check_ptr
+        idx += 1
+    end
+
+    #copy in the last edge 
+    if start_ptr == length(new_subedges)
+        (edge,weight) = new_subedges[start_ptr]
+        consolidated_indices[:,idx] = edge
+        consolidated_weights[idx] = weight
+        return consolidated_indices[:,1:idx], consolidated_weights[1:idx]
+    else
+        return consolidated_indices[:,1:idx-1], consolidated_weights[1:idx-1]
+    end
+
+end
+
 
 function embedded_contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1},embedded_mode::Int) where T
 
@@ -305,6 +415,76 @@ function embedded_contraction!(simplicial_complexes::Array{SymTensorUnweighted{S
             embedded_contraction!(simplicial_complexes[i],x,y,max_order)
         end
     end
+end
+
+
+function compute_multinomial(indices::Vector{Int})
+
+    label_freqency = Dict{Int,Int}()
+
+    for i in indices
+        if haskey(label_freqency,i)
+            label_freqency[i] += 1
+        else
+            label_freqency[i] = 1
+        end
+    end
+
+    return multinomial(values(label_freqency)...)
+end
+
+function contract_all_unique_permutations(A::Union{SymTensor{M,T},SymTensorUnweighted{M}},U::Matrix{T}) where {M <: Motif,T}
+
+    m,d = size(U)
+    #@assert A.n == m 
+    
+    contraction_components = Array{T,2}(undef,m,binomial(d + A.order-2, A.order-1))
+                                                # n choose k w/ replacement
+    #println("contraction comps:$(size(contraction_components))")
+    contract_all_unique_permutations!(A,U,contraction_components,0,size(U,2),Array{Int}(undef,0))
+    
+    return contraction_components
+end
+
+function contract_all_unique_permutations!(A::Union{SymTensor{M,T},SymTensorUnweighted{M}},U::Matrix{T},
+                            contraction_components::Matrix{T},offset::Int,
+                            end_idx::Int,prefix_indices::Vector{Int}) where {M <: Motif,T}
+
+    d = size(U,2)
+    if A.order == 3 
+        indices = Array{Int}(undef,length(prefix_indices)+2)
+        indices[1:end-2] = prefix_indices
+
+        for i = 1:end_idx
+            indices[end-1] = i  
+            sub_A_mat = contract_to_mat(A, U[:,i])
+            #for j = i:size(U,2)
+            for j = 1:i
+                indices[end] = j
+
+                factor = compute_multinomial(indices)
+                #println("edge:$indices  factor:$factor  ")
+
+                idx = offset + i*(i-1)÷2 + j
+            
+                contraction_components[:,idx] = factor*(sub_A_mat*U[:,j])
+            end
+        end
+    else
+
+        running_offset = copy(offset)
+        for i = 1:end_idx
+            sub_A = single_mode_ttv(A,U[:,i])
+            prefix = copy(prefix_indices)
+            push!(prefix,i)
+     
+            contract_all_unique_permutations!(sub_A,U, contraction_components,running_offset,i,prefix) 
+
+            running_offset += binomial(i + A.order-3, A.order-2)
+        end
+
+    end
+
 end
 
 

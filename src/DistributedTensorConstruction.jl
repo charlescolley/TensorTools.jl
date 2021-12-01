@@ -19,7 +19,7 @@ using LightGraphs
 using Distributed
 
 # -- contractions.jl -- #
-using Combinatorics:integer_partitions,permutations, multinomial
+using Combinatorics:integer_partitions,permutations, multinomial, combinations
 
 #using PyCall
 #@pyimport pickle
@@ -76,5 +76,8 @@ export tensor_from_graph, tensors_from_graph
 export load_SymTensorUnweighted
 export contraction_divide_out!, embedded_contraction!, contraction!, contraction_divide_out, embedded_contraction, contraction
 export contract_to_mat, contract_to_mat_divide_out
+export single_mode_ttv
+export contract_all_unique_permutations
+
 
 end #module end 

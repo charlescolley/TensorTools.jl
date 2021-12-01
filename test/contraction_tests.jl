@@ -92,6 +92,38 @@ end
 
     end
 
+    @testset "single mode contraction" begin 
+
+       
+
+        A_ten = rand_weighted_tensors[end]
+    
+        B_ten = single_mode_ttv(A_ten,x)
+        for _ in 1:(A_ten.order-2)
+            B_ten = single_mode_ttv(B_ten,x)
+        end
+
+        y = contraction(A_ten,x)
+        y2 = zeros(A_ten.n)
+
+        for (i,w) in zip(B_ten.indices,B_ten.weights)
+            y2[i] = w 
+        end
+
+        @test norm(y - y2)/norm(y) < TOL
+
+    end
+
+    @testset "permutation contraction" begin 
+
+        U = rand(rand_weighted_tensors[2].n,5)
+        contraction_comps = contract_all_unique_permutations(rand_weighted_tensors[2],U)
+        contraction_comps_hc = fourth_order_contract_all_pairs(rand_weighted_tensors[2],U)
+        @test contraction_comps_hc  == contraction_comps
+
+        #TODO: add in fifth order hard coded test to check extra step of recursion
+    end
+
     @testset "hard coded weighted contractions" begin 
 
         y_hc = zeros(n)
@@ -171,3 +203,4 @@ end
     end
 
 end
+
