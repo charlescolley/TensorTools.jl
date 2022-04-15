@@ -43,7 +43,6 @@ end
 
 #TODO: determine types
 function write_tensor(edge_set,outputfile)
-
     k = length(edge_set[1])
     indices = zeros(k,length(edge_set))
     idx = 1
@@ -62,7 +61,7 @@ function write_tensor(edge_set,outputfile)
 
 end
 
-function write_ssten(indices::Array{Int,2},n, filepath::String)
+function write_ssten(indices::Array{Int,2}, n, filepath::String)
     file = open(filepath, "w")
     order = size(indices,1)
 
@@ -80,6 +79,62 @@ function write_ssten(indices::Array{Int,2},n, filepath::String)
 
     close(file)
 end
+
+function write_ssten(indices::Vector{Vector{Int}}, n, filepath::String,total_edge_count::Int=-1)
+    file = open(filepath, "w")
+    order = length(indices[1])
+                    #assuming a non-empty list 
+    if total_edge_count == -1 
+        total_edge_count = length(indices)
+    end 
+
+
+    header = "$(order) $(n) $(total_edge_count)\n"
+    write(file,header);
+
+    for (edge) in indices
+	edge_string=""
+        for v_i in edge
+	     edge_string *= string(v_i," ")
+        end
+ 	edge_string *= "\n"
+	write(file,edge_string)
+    end
+
+    close(file)
+end
+
+
+function append_to_ssten(indices::Array{Int,2},filepath::String)
+    file = open(filepath, "a")
+
+    for (edge) in eachcol(indices)
+	edge_string=""
+        for v_i in edge
+	     edge_string *= string(v_i," ")
+        end
+ 	edge_string *= "\n"
+	write(file,edge_string)
+    end
+
+    close(file)
+end
+
+function append_to_ssten(indices::Vector{Vector{Int}},filepath::String)
+    file = open(filepath, "a")
+
+    for (edge) in indices
+	edge_string=""
+        for v_i in edge
+	     edge_string *= string(v_i," ")
+        end
+ 	edge_string *= "\n"
+	write(file,edge_string)
+    end
+
+    close(file)
+end
+
 
 #TODO: add saving in binary flag, parse v_i
 function load_ssten(filepath,delimiter=' ')
