@@ -1,8 +1,7 @@
 
 module DistributedTensorConstruction 
 
-include("../externalSoftware/TuranShadow.jl")   #local
-#include("/homes/ccolley/Documents/Software/GLANCE/TuranShadow.jl")    #server
+include("externalSoftware/TuranShadow.jl")
 
 
 # -- fileio -- #
