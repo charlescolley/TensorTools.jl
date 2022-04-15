@@ -65,6 +65,10 @@ include("tensorConstruction.jl")
 include("distributedTuranShadow.jl")
 #include("communication.jl")
 include("contraction.jl")
+include("MPI/shared_MPI.jl")
+include("MPI/gather.jl")
+include("MPI/broadcast.jl")
+include("MPI/personalized_all_to_all.jl")
 
 #TODO: move to Experiments.jl?
 

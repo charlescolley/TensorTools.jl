@@ -1,5 +1,6 @@
 using Test
 using Suppressor
+using Distributed
 
 using SparseArrays
 import Random:seed!
@@ -31,10 +32,7 @@ dropzeros!(A)
 
 
 #include("distributedTuranShadow_tests.jl")
-include("fileio_tests.jl")
-include("tensorConstruction_tests.jl")
-include("contraction_tests.jl")
-
+include("MPI_tests.jl")
 
 
 
