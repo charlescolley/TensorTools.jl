@@ -49,6 +49,8 @@ struct SymTensor{T <: Motif,S}
     SymTensor{T}(n::Int,order::Int,indices::Matrix{Int},weights::Vector{S}) where {T<:Motif,S} = new{T,S}(n,order,indices,weights)
 end
 
+abstract type Communication end
+
 #TODO: rethink naming
 
 #struct TensorComplexUnweighted
@@ -69,11 +71,17 @@ include("MPI/shared_MPI.jl")
 include("MPI/gather.jl")
 include("MPI/broadcast.jl")
 include("MPI/personalized_all_to_all.jl")
+include("MPI/all_to_all_reduce.jl")
+
+
 
 #TODO: move to Experiments.jl?
 
 export SymTensorUnweighted, SymTensor , TensorComplexUnweighted
 export Motif, Clique, Cycle 
+
+export all_to_all_reduce_comm
+
 
 export tensor_from_graph, tensors_from_graph
 export load_SymTensorUnweighted
