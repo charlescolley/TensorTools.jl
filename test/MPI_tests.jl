@@ -1,7 +1,8 @@
 addprocs(4)
 using DistributedTensorConstruction: broadcast_communication, gather_communication, 
-                                     personalized_all_to_all_communication
-@everywhere using DistributedTensorConstruction
+                                     personalized_all_to_all_communication,
+                                     all_to_all_reduction_communication
+@everywhere using DistributedTensorConstruction: all_to_all_reduce
 @everywhere using Random: seed!
 
 
@@ -12,26 +13,28 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
     seed!(0)
     seeds = rand(UInt,length(pids))
     n = 1
-
+   
+    
     @testset "Broadcast Test" begin
         
-        @everywhere function broadcast_proc(sending_to,receiving_from,n)
+        @everywhere function broadcast_test_proc(n,communication)
 
-            #println("proc $(myid())")
-        
-        
-            if receiving_from === nothing 
+            if communication.receiving_from === nothing 
                 seed!(0)
                 data = rand(Float64,n,n)
+                broadcast(data,communication)
             else
-                data = take!(receiving_from)
-            end
-            for channel in sending_to
-                put!(channel,data)
-            end
-        
-            return data
-        
+                data = broadcast(nothing ,communication)
+            end 
+
+            if communication.receiving_from === nothing 
+                broadcast(data,communication)
+                profiled_data = data
+            else
+                profiled_data,_,_,_ = broadcast_profiled(nothing ,communication)
+            end 
+
+            return data, profiled_data      
         end
         
 
@@ -40,7 +43,7 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
         #  Stage the Communication
         #
         @inferred broadcast_communication(pids,bcast_pididx,zeros(Float64,0,0))
-        sending_to, receiving_from = broadcast_communication(pids,bcast_pididx,zeros(Float64,0,0))
+        communication = broadcast_communication(pids,bcast_pididx,zeros(Float64,0,0))
 
         futures = []
 
@@ -49,24 +52,22 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
         #
 
         for p = 1:length(pids)
-   
-            if p == bcast_pididx
-                future = @spawnat pids[p] broadcast_proc(sending_to[p],nothing,n)
-            else
-                future = @spawnat pids[p] broadcast_proc(sending_to[p],receiving_from[p],n)
-            end
-
+            future = @spawnat pids[p] broadcast_test_proc(communication[p],n)
         end
 
-        all_vals = []
+        bcast_vals = []
+        bcast_profiled_vals = []
 
         
         # collect and aggregate the results 
         for future in futures
-            push!(all_vals,fetch(future))
+            bcast_data, bcast_profiled_data = fetch(future)
+            push!(bcast_vals,bcast_data)
+            push!(bcast_profiled_vals,bcast_profiled_data)
         end    
 
-        @test all([v == all_vals[1] for v in all_vals])
+        @test all([v == bcast_vals[1] for v in bcast_vals])
+        @test all([v == bcast_profiled_vals[1] for v in bcast_profiled_vals])
 
     end
 
@@ -146,7 +147,41 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
 
         @test parallel_generated == serial_generated
     end
+    =#
+    @testset "All to All Reduction" begin
 
+        @inferred all_to_all_reduction_communication(pids,1)
+        communication = all_to_all_reduction_communication(pids,1)
+    
+
+        @everywhere function all_to_all_reduction_proc(my_data,proc_communication)
+
+            reduction_f = (x,y) -> x + y 
+            reduced_data = all_to_all_reduce(reduction_f,my_data,proc_communication)
+
+            return reduced_data       
+        end
+
+
+        test_vals = rand(1:100,length(pids))
+
+        futures = []
+    
+        for p = 1:length(pids)
+            future = @spawnat pids[p] all_to_all_reduction_proc(test_vals[p],communication[p])
+            push!(futures,future)
+        end
+
+        all_vals = [] 
+        for future in futures 
+            push!(all_vals,fetch(future))
+        end 
+
+        @test sum(test_vals) == all_vals[1]
+        @test all([v == all_vals[1] for v in all_vals])
+        
+    end
+    #=
     @testset "Personalized All to All" begin
 
         @everywhere function personalized_communication_proc(sending_to,my_channel,seed,my_idx,n)
