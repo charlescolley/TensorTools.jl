@@ -62,12 +62,13 @@ abstract type Communication end
 #LVGNA_data = "/homes/ccolley/Documents/Research/heresWaldo/data/MultiMagna_TAME"       #server
 #TENSOR_PATH = "/homes/ccolley/Documents/Research/TensorConstruction/tensors/"   #server
 
+
 include("fileio.jl")
 include("tensorConstruction.jl")
 include("distributedTuranShadow.jl")
 #include("communication.jl")
 include("contraction.jl")
-include("MPI/shared_MPI.jl")
+include("MPI/shared_mpi.jl")
 include("MPI/gather.jl")
 include("MPI/broadcast.jl")
 include("MPI/personalized_all_to_all.jl")
