@@ -81,6 +81,7 @@ export SymTensorUnweighted, SymTensor , TensorComplexUnweighted
 export Motif, Clique, Cycle 
 
 export all_to_all_reduce_comm
+export broadcast_comm, broadcast_communication, broadcast, broadcast_profiled
 
 
 export tensor_from_graph, tensors_from_graph
