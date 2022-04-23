@@ -1,85 +1,131 @@
-function personalized_all_to_all_communication(pids,args...)
-    if length(pids) == 2^Int(round(log2(length(pids))))
-        return personalized_all_to_all_communication_PoWOT(pids,args...)
-    else
-        return personalized_all_to_all_communication_naive(pids,args...)
-    end
+struct personalized_all_to_all_comm{T} <: Communication
+    sending_to::Vector{Tuple{Int,RemoteChannel{Channel{Tuple{Int,T}}}}}
+    my_channel::RemoteChannel{Channel{Tuple{Int,T}}}
+    my_idx::Int
 end
 
-function personalized_all_to_all_communication_naive(pids,channel_type::T) where T 
-    # have all processes send to the same process at every iteration
+
+function personalized_all_to_all_communication(pids,channel_type::T) where T 
 
     # each process gets its own channel 
-    process_channels = Vector{RemoteChannel{Channel{T}}}(undef,length(pids))
-    sending_to = Vector{Vector{RemoteChannel{Channel{T}}}}(undef,length(pids))
+    process_channels = Vector{RemoteChannel{Channel{Tuple{Int,T}}}}(undef,length(pids))
+    sending_to = Vector{Vector{Tuple{Int,RemoteChannel{Channel{Tuple{Int,T}}}}}}(undef,length(pids))
 
     for (i,pid) in enumerate(pids)
-        process_channels[i] = RemoteChannel(()->Channel{T}(length(pids)-1),pid)
-        sending_to[i] = Vector{RemoteChannel{Channel{Tuple{Int,T}}}}(undef,length(pids)-1)
+        process_channels[i] = RemoteChannel(()->Channel{Tuple{Int,T}}(length(pids)-1),pid)
+        sending_to[i] = Vector{Tuple{Int,RemoteChannel{Channel{Tuple{Int,T}}}}}(undef,length(pids)-1)
     end 
 
-    for i = 1:length(pids)
-        sending_to[i] = process_channels[1:end .!= i]
+    if length(pids) == 2^Int(round(log2(length(pids))))
+        personalized_all_to_all_communication_PoWOT!(pids,sending_to,process_channels,channel_type)
+    else
+        personalized_all_to_all_communication_naive!(pids,sending_to,process_channels,channel_type)
+    end
+
+    communication = Vector{personalized_all_to_all_comm{T}}(undef,length(pids))
+
+    for p = 1:length(pids)
+        communication[p] = personalized_all_to_all_comm(sending_to[p],process_channels[p],p)
     end 
 
-    return sending_to, process_channels
+    return communication
 end
 
-function personalized_all_to_all_communication_PoWOT(pids,channel_type::T) where T 
+function personalized_all_to_all_communication_naive!(pids,sending_to,process_channels,channel_type::T) where T 
     # have all processes send to the same process at every iteration
 
-    # each process gets its own channel 
-    process_channels = Vector{RemoteChannel{Channel{T}}}(undef,length(pids))
-    sending_to = Vector{Vector{RemoteChannel{Channel{T}}}}(undef,length(pids))
-
     for i = 1:length(pids)
-        process_channels[i] = RemoteChannel(()->Channel{T}(length(pids)-1),pids[i])
-        sending_to[i] = Vector{RemoteChannel{Channel{T}}}(undef,length(pids)-1)
+        idx = 1
+        for j = 1:length(sending_to[i])
+            if idx == i
+                idx += 1
+            end
+            sending_to[i][j] = (idx,process_channels[idx])
+            idx += 1
+            j+=1
+        end
     end 
+end
+
+function personalized_all_to_all_communication_PoWOT!(pids,sending_to,process_channels,channel_type::T) where T 
+    # have all processes send to the same process at every iteration
+
 
     for i = 1:length(pids)
-        sending_to[i] = Vector{RemoteChannel{Channel{T}}}(undef,length(pids)-1)
+        sending_to[i] = Vector{Tuple{Int,RemoteChannel{Channel{Tuple{Int,T}}}}}(undef,length(pids)-1)
         for j = 1:(length(pids)-1)
             sending_idx = ((i - 1) ⊻ j) + 1
-            sending_to[i][j] = process_channels[sending_idx]
+            sending_to[i][j] = (sending_idx,process_channels[sending_idx])
         end
     end 
 
-    return sending_to, process_channels
 end
 
 
+function personalized_all_to_all(all_data::Vector{T},communication::C) where {T,C <: personalized_all_to_all_comm} 
 
-@everywhere function personalized_communication_proc_profiled(sending_to,my_channel,seed,my_idx,n)
+    all_received_data = Vector{T}(undef,length(communication.sending_to)+1)
+    all_received_data[communication.my_idx] = all_data[communication.my_idx]
 
-    seed!(seed)
-    all_data = Vector{Matrix{Float64}}(undef,length(sending_to))
-    data_for_me = Vector{Matrix{Float64}}(undef,length(sending_to)+1)
-                                    # expecting length(pids) - 1 data points  
-    data_for_me[my_idx] = rand(Float64,n,n)
-    for i = 1:length(sending_to)
-             # generate data for all_other_process
-        all_data[i] = rand(Float64,n,n)
+    personalized_all_to_all!(all_data::Vector{T},all_received_data,communication::C)
+
+    return all_received_data
+end
+
+function personalized_all_to_all!(all_data::Vector{T},all_received_data,communication::C) where {T,C <: personalized_all_to_all_comm} 
+
+    idx = 1
+    for (dest_idx,channel) in communication.sending_to
+        if idx == communication.my_idx
+            idx += 1 
+        end 
+        put!(channel,(communication.my_idx,all_data[dest_idx]))
+        idx += 1
     end 
 
-    putting_time = 0.0
-    for (i,channel) in enumerate(sending_to)
-        _,t = @timed put!(channel,(my_idx,all_data[i]))
-        putting_time += t
-    end 
-
-   
+    
     data_taken = 1 
-    taking_time = 0.0
-    while data_taken <= length(sending_to)
-        (idx,their_data),t = @timed take!(my_channel)
-        taking_time += t 
+    while data_taken <= length(communication.sending_to)
+        (idx,their_data) = take!(communication.my_channel)
+        all_received_data[idx] = their_data
+        data_taken += 1 
+    end 
+end
+
+function personalized_all_to_all_profiled(all_data::Vector{T},communication::C) where {T,C <: personalized_all_to_all_comm} 
+
+    put_timings = Vector{Float64}(undef,length(communication.sending_to))
+    take_timings = Vector{Float64}(undef,length(communication.sending_to))
+    all_received_data = Vector{T}(undef,length(communication.sending_to)+1)
+    all_received_data[communication.my_idx] = all_data[communication.my_idx]
+    
+    internal_timing = personalized_all_to_all_profiled!(all_data,all_received_data,put_timings,take_timings,communication)
+ 
+    return all_received_data, internal_timing, put_timings, take_timings
+end
+
+function personalized_all_to_all_profiled!(all_data::Vector{T},data_for_me::Vector{T},
+                                           put_timings::Vector{Float64}, take_timings::Vector{Float64},
+                                           communication::C) where {T,C <: personalized_all_to_all_comm} 
+
+    start_time = time_ns()
+
+    for (i,(dest_i,channel)) in enumerate(communication.sending_to)
+        put_start_time = time_ns()
+        put!(channel,(communication.my_idx,all_data[dest_i]))
+        put_timings[i] = Float64(time_ns() - put_start_time)*1e-9
+    end 
+
+    data_taken = 1 
+    while data_taken <= length(communication.sending_to)
+        take_start_time = time_ns()
+        (idx,their_data) = take!(communication.my_channel)
+        take_timings[data_taken] = Float64(time_ns() - take_start_time)*1e-9
+     
         data_for_me[idx] = their_data
         data_taken += 1 
     end 
 
-    return data_for_me, putting_time, taking_time
-
-end 
-
+    return Float64(time_ns() - start_time)*1e-9
+end
 

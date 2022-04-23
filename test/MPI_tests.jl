@@ -153,85 +153,72 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
         @test all([v == all_vals[1] for v in all_vals])
         
     end
-    #=
+    
+
     @testset "Personalized All to All" begin
 
-        @everywhere function personalized_communication_proc(sending_to,my_channel,seed,my_idx,n)
+        @everywhere function personalized_all_to_all_proc(seed,n,comm)
+
 
             seed!(seed)
-            all_data = Vector{Matrix{Float64}}(undef,length(sending_to))
-            data_for_me = Vector{Matrix{Float64}}(undef,length(sending_to)+1)
-                                            # expecting length(pids) - 1 data points  
-            data_for_me[my_idx] = rand(Float64,n,n)
-            for i = 1:length(sending_to)
+
+            all_data = Vector{Matrix{Float64}}(undef,length(comm.sending_to)+1)
+            #data_for_me[comm.my_idx] = rand(Float64,n,n)
+            for i = 1:length(comm.sending_to) + 1
                      # generate data for all_other_process
                 all_data[i] = rand(Float64,n,n)
             end 
+
+            #data_for_me = Vector{Matrix{Float64}}(undef,length(sending_to)+1)
+                                            # expecting length(pids) - 1 data points  
+
+            data_for_me = personalized_all_to_all(all_data,comm)
+            data_for_me_profiled,_,_,_ = personalized_all_to_all_profiled(all_data,comm)
         
-            for (i,channel) in enumerate(sending_to)
-                put!(channel,(my_idx,all_data[i]))
-            end 
-        
-            data_taken = 1 
-            while data_taken <= length(sending_to)
-                (idx,their_data) = take!(my_channel)
-        
-                data_for_me[idx] = their_data
-                data_taken += 1 
-            end 
-        
-            return data_for_me
+            return data_for_me, data_for_me_profiled
         
         end 
         
 
-        #  --  Stage the Communication  --  #
-        @inferred personalized_all_to_all_communication(pids,(1,zeros(Float64,0,0)))
-        sending_to, channels = personalized_all_to_all_communication(pids,(1,zeros(Float64,0,0)))
-        futures = []
-    
-    
-        #
-        #  Start the processors
-        #
-    
-        for p = 1:length(pids)
-
-            future = @spawnat pids[p] personalized_communication_proc(sending_to[p], channels[p],seeds[p],p,n)
-            push!(futures,future)
-        end
-    
-
-        all_vals = Array{Matrix{Float64}}(undef,length(pids),length(pids))
+        for proc_batch in [pids,pids[1:4]]
+            #  --  Stage the Communication  --  #
+            @inferred personalized_all_to_all_communication(proc_batch,zeros(Float64,0,0))
+            communication = personalized_all_to_all_communication(proc_batch,zeros(Float64,0,0))
+            futures = []
         
-        # collect and aggregate the results 
-        for (i,future) in enumerate(futures)
-            all_vals[i,:] = fetch(future)
-        end    
         
-    
-        serial_generated = Array{Matrix{Float64}}(undef,length(pids),length(pids))
-        for (p_i,seed) in enumerate(seeds)
-            seed!(seed)
-    
-            serial_generated[p_i,p_i] = rand(Float64,n,n)
-            if length(pids) == 2^Int(round(log2(length(pids))))
-                for p_j=1:length(pids)-1
-                    serial_generated[((p_i - 1) ⊻ p_j) + 1,p_i] = rand(Float64,n,n)
-                end
-            else
-                for p_j=1:length(pids)
-                    if p_j != p_i 
-                        serial_generated[p_j,p_i] = rand(Float64,n,n)
-                    end
+            
+            # -- Start the processors -- #
+            for p = 1:length(proc_batch)
+                future = @spawnat proc_batch[p] personalized_all_to_all_proc(seeds[p],n,communication[p])
+                push!(futures,future)
+            end
+        
+
+            all_vals = Array{Matrix{Float64}}(undef,length(proc_batch),length(proc_batch))
+            all_vals_profiled = Array{Matrix{Float64}}(undef,length(proc_batch),length(proc_batch))
+            
+
+            # collect and aggregate the results 
+            for (i,future) in enumerate(futures)
+                data, data_profiled = fetch(future)
+                all_vals[i,:] = data
+                all_vals_profiled[i,:] = data_profiled
+            end    
+            
+        
+            serial_generated = Array{Matrix{Float64}}(undef,length(proc_batch),length(proc_batch))
+            for p_i in 1:length(proc_batch)
+                seed!(seeds[p_i])
+                for p_j=1:length(proc_batch)
+                    serial_generated[p_j,p_i] = rand(Float64,n,n)
                 end
             end
+
+            @test all_vals == serial_generated
+            @test all_vals_profiled == serial_generated
     
         end
-        @test all_vals == serial_generated
-            #power of two serial data is mapped incorrectly 
-   
-
     end 
 
 end
