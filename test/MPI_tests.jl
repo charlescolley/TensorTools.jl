@@ -73,32 +73,14 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
 
     @testset "Gather Test" begin
     
-        @everywhere function gather_proc(sending_to,receiving_from,seed,n)
-
+        @everywhere function gather_proc_test(seed,n,communication)
 
             seed!(seed)
             my_data = rand(Float64,n,n)
-        
-            all_data = Vector{Matrix{Float64}}(undef,1)
-            all_data[1] = my_data
-        
-            for channel in reverse(receiving_from)#reverse()
-                           # communication patterns come from the inverse of the broadcast code, 
-                           # so receiving channels need to be reverse.  
-                           # TODO: may be good to reconsider this version
-        
-        
-                their_data = take!(channel)
-        
-                append!(all_data,their_data)
-            end
-        
-            if sending_to === nothing
-                return all_data
-            else 
-                put!(sending_to,all_data)
-            end
-        
+            all_data = gather(my_data,communication)
+            all_data_profiled,_,_,_ = gather_profiled(my_data,communication)
+
+            return all_data, all_data_profiled
         
         end
 
@@ -109,7 +91,7 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
         #  Stage the Communication
         #
         @inferred gather_communication(pids,gather_pididx,zeros(Float64,0,0))
-        sending_to, receiving_from  = gather_communication(pids,gather_pididx,zeros(Float64,0,0))
+        communication = gather_communication(pids,gather_pididx,zeros(Float64,0,0))
 
         futures = []
 
@@ -119,35 +101,25 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
         #
 
         for p = 1:length(pids)
-            if p == gather_pididx
-                future = @spawnat pids[p] gather_proc(nothing,receiving_from[p],seeds[p],n)
-            else
-                future = @spawnat pids[p] gather_proc(sending_to[p],receiving_from[p],seeds[p],n)
-            end
+  
+            future = @spawnat pids[p] gather_proc_test(seeds[p],n,communication[p])
             push!(futures,future)
         end
 
 
+        gather_data, gather_profiled_data = fetch(futures[gather_pididx])
 
-        all_vals = []
-
-        
-        # collect and aggregate the results 
-        for future in futures
-            push!(all_vals,fetch(future))
-        end    
-
-        parallel_generated = fetch(futures[gather_pididx])
-        
         serial_generated = []
         for seed in seeds
             seed!(seed)
             push!(serial_generated,rand(Float64,n,n))
         end
 
-        @test parallel_generated == serial_generated
+        @test serial_generated == gather_data
+        @test serial_generated == gather_profiled_data
+
     end
-    =#
+
     @testset "All to All Reduction" begin
 
         @inferred all_to_all_reduction_communication(pids,1)

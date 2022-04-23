@@ -82,6 +82,8 @@ export Motif, Clique, Cycle
 
 export all_to_all_reduce_comm
 export broadcast_comm, broadcast_communication, broadcast, broadcast_profiled
+export gather_comm, gather_communication, gather, gather_profiled
+export personalized_all_to_all_comm, personalized_all_to_all_communication, personalized_all_to_all, personalized_all_to_all_profiled
 
 
 export tensor_from_graph, tensors_from_graph
