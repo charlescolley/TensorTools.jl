@@ -30,8 +30,21 @@ for i = 1:size(A,1)
 end
 dropzeros!(A)
 
+test_smat_file = "test_tensors/testsymER_n:25_p:9999e-4_seed:54321.smat"
 
-#include("distributedTuranShadow_tests.jl")
+# src: https://github.com/JuliaLang/julia/issues/18780#issuecomment-863505347
+struct NoException <: Exception end
+macro test_nothrow(ex)
+    esc(:(@test_throws NoException ($(ex); throw(NoException()))))
+end
+
+addprocs(7)
+@everywhere using DistributedTensorConstruction
+
+include("distributedTuranShadow_tests.jl")
+include("fileio_tests.jl")
+include("tensorConstruction_tests.jl")
+include("contraction_tests.jl")
 include("MPI_tests.jl")
 
 

@@ -65,7 +65,7 @@ abstract type Communication end
 
 include("fileio.jl")
 include("tensorConstruction.jl")
-include("distributedTuranShadow.jl")
+
 #include("communication.jl")
 include("contraction.jl")
 include("MPI/shared_mpi.jl")
@@ -74,6 +74,7 @@ include("MPI/broadcast.jl")
 include("MPI/personalized_all_to_all.jl")
 include("MPI/all_to_all_reduce.jl")
 
+include("distributedTuranShadow.jl")
 
 
 #TODO: move to Experiments.jl?
@@ -85,6 +86,8 @@ export all_to_all_reduce_comm, all_to_all_reduce, all_to_all_reduction_communica
 export broadcast_comm, broadcast_communication, broadcast, broadcast_profiled
 export gather_comm, gather_communication, gather, gather_profiled
 export personalized_all_to_all_comm, personalized_all_to_all_communication, personalized_all_to_all, personalized_all_to_all_profiled
+export endBehavior,returnToSpawner, writeFile
+export distributed_clique_sample, distributed_sample_smat_files
 
 export all_to_all_reduce_comm, all_to_all_reduction_communication, all_to_all_reduce
 export broadcast_comm, broadcast_communication, broadcast, broadcast_profiled
