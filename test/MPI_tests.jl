@@ -1,7 +1,4 @@
-addprocs(4)
-using DistributedTensorConstruction: broadcast_communication, gather_communication, 
-                                     personalized_all_to_all_communication,
-                                     all_to_all_reduction_communication
+@everywhere using DistributedTensorConstruction
 @everywhere using DistributedTensorConstruction: all_to_all_reduce
 @everywhere using Random: seed!
 
@@ -10,6 +7,7 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
 @testset "MPI Tests" begin
 
     pids = workers()
+    println("MPI Test procs:$(pids)")
     seed!(0)
     seeds = rand(UInt,length(pids))
     n = 1
@@ -70,7 +68,7 @@ using DistributedTensorConstruction: broadcast_communication, gather_communicati
         @test all([v == bcast_profiled_vals[1] for v in bcast_profiled_vals])
 
     end
-
+ 
     @testset "Gather Test" begin
     
         @everywhere function gather_proc_test(seed,n,communication)
