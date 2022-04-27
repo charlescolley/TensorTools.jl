@@ -79,15 +79,17 @@ include("distributedTuranShadow.jl")
 
 #TODO: move to Experiments.jl?
 
-export SymTensorUnweighted, SymTensor , TensorComplexUnweighted
+export SymTensorUnweighted, SymTensor, TensorComplexUnweighted
 export Motif, Clique, Cycle 
 
 export all_to_all_reduce_comm, all_to_all_reduce, all_to_all_reduction_communication
 export broadcast_comm, broadcast_communication, broadcast, broadcast_profiled
 export gather_comm, gather_communication, gather, gather_profiled
 export personalized_all_to_all_comm, personalized_all_to_all_communication, personalized_all_to_all, personalized_all_to_all_profiled
+export all_to_all_reduce_comm, all_to_all_reduction_communication, all_to_all_reduce
+
 export endBehavior,returnToSpawner, writeFile
-export distributed_clique_sample, distributed_sample_smat_files
+export distributed_clique_sample, distributed_sample_smat_files, distributed_find_all_cliques
 
 export all_to_all_reduce_comm, all_to_all_reduction_communication, all_to_all_reduce
 export broadcast_comm, broadcast_communication, broadcast, broadcast_profiled

@@ -62,43 +62,13 @@
 
         @test correct_range
     end 
-   
-    #=
+
     @testset "Distributed Find All Cliques" begin
-        #=
+        
         @testset "Helper Functions" begin
             
-            @testset "check bounds" begin
-
-                seed!(325123)
-
-                clique_count = 20
-                X = rand(1:100,clique_count,order)
-                cliques  = sort([sort(row) for row in eachrow(X)])
-
-                @test check_lower_bound(cliques,fill(typemin(Int),order)) == 1  # all are <= bound
-                @test check_lower_bound(cliques,cliques[end]) == clique_count # all but last is <= bound
-                @test check_lower_bound(cliques,fill(typemax(Int),order)) == (clique_count +1) # none are <= bound
-                
-
-                @test check_upper_bound(cliques,fill(typemax(Int),order)) == clique_count  #all are < bound
-                @test check_upper_bound(cliques,cliques[end]) == clique_count - 1 
-                                                                 #-1 bc strict upper bound 
-                @test check_upper_bound(cliques,fill(typemin(Int),order)) == 0  #none are <  bound 
-
-                                              
-
-
-            end 
-            
-
-
-
         end 
-        =#
-
-
-   
+      
         @testset "Full Procedure" begin
 
             collection_idx = 1
@@ -166,7 +136,7 @@
         end
         
     end
-     =#
+
 
 
     @testset "Distributed Sample Sort Driver Test" begin
@@ -180,8 +150,6 @@
             @test_nothrow distributed_clique_sample(pids, test_smat_file, ssten_filename, order, samples, profile)
         end
         @test_nothrow distributed_sample_smat_files(pids, [test_smat_file], "./", [3,4],[1000*proc_count,2000*proc_count])
-
-
     end 
 
 end

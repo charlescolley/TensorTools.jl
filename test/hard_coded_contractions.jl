@@ -238,3 +238,47 @@ function fourth_order_contract_all_pairs(A::Union{SymTensor{M,T},SymTensorUnweig
     return contraction_components
 
 end
+
+
+#TODO: finish 
+function fifth_order_contract_all_pairs(A::Union{SymTensor{M,T},SymTensorUnweighted{M}},U::Matrix{T}) where {M <: Motif,T}
+
+    @assert A.order == 4 
+    m,d = size(U)
+    @assert A.n == m 
+    
+    contraction_components = Array{T,2}(undef,m,binomial(d + 2, 3))
+                                                # n choose k w/ replacement
+    idx = 1
+    for i = 1:d
+        sub_A1 = single_mode_ttv(A, U[:,i])
+
+        for j = 1:i 
+            sub_A2 = single_mode_ttv(sub_A1, U[:,j])
+
+            for k = 1:j 
+
+                sub_A3 = contract_to_mat(sub_A2, U[:,k])
+
+                for l = 1:k
+                    #compute multinomial factor
+                    if i == j == k == l 
+                        factor = 1
+                    elseif i == j == k || i == j == l || j == k == l || i == k == l
+                        factor = 10
+                    elseif i != j != k != i 
+                        factor = 6 
+                    end
+                    # this could be faster by breaking up across loops
+
+                    contraction_components[:,idx ] = factor*(sub_A3*U[:,k])
+                    idx += 1
+                end
+            end 
+
+        end
+    end
+
+    return contraction_components
+
+end

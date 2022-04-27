@@ -16,9 +16,9 @@ using DistributedTensorConstruction
 const DTC = DistributedTensorConstruction
 
 seed!(54321)
-n= 25
+n= 10
 trials = 1000
-order = 5
+order = 4
 clique_size = 3
 TOL= 1e-15
 
@@ -42,10 +42,10 @@ addprocs(7)
 @everywhere using DistributedTensorConstruction
 
 include("distributedTuranShadow_tests.jl")
-include("fileio_tests.jl")
-include("tensorConstruction_tests.jl")
-include("contraction_tests.jl")
-include("MPI_tests.jl")
+#include("fileio_tests.jl")
+#include("tensorConstruction_tests.jl")
+#include("contraction_tests.jl")
+#include("MPI_tests.jl")
 
 
 
