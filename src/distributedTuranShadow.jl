@@ -2,9 +2,13 @@ function compute_splitting_idx(n,p)
     #  computes the uniform splitting indices for 
     #  an array of length n into p pieces
     splitting_idx = zeros(Int,p-1)
-    for i =1:(n - Int(ceil(n/p))) 
-        splitting_idx[(i % (p-1)) + 1] += 1
-    end
+    idx = 1
+    count = 1
+    while count <= n - Int(ceil(n/p))
+        splitting_idx[idx] += 1 
+        idx = (idx % (p-1)) + 1
+        count += 1
+    end 
     for i = 2:(p-1)
         splitting_idx[i] += splitting_idx[i-1]
     end
