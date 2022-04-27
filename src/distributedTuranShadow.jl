@@ -323,6 +323,170 @@ function sample_smat_files_proc(smat_files, output_path, orders, samples, pids, 
     end
 end
 
+function parallel_find_all_clique_proc(smat_file,order,initial_samples,pids, ssten_filename,
+                                                   gather_comm, bcast_comm, pa2a_comm, ra2a_comm,
+                                                   serialized_write_channel,
+                                                   atAnd::endBehavior=writeFile())
+
+    prev_found_cliques = 0 
+    proc_count = length(pids)
+    A = MatrixNetworks.readSMAT(smat_file)
+    samples = initial_samples
+    cliques_for_me = Vector{Vector{Int}}(undef,0)
+                    # will need a better approach for this in the future
+    
+    # define these empty vectors here to expand their scope from the while loop.
+    cliques = Vector{Vector{Int64}}(undef,0)
+    final_splittings = Vector{Vector{Int64}}(undef,0)
+    start_idx_for_processors = Vector{Int}(undef,proc_count)
+    end_idx_for_processors = Vector{Int}(undef,proc_count)
+
+    while true 
+        _, cliques = TuranShadow(A,order,samples)
+        reduce_to_unique_cliques!(cliques)
+
+        cliques = merge_clique_lists(cliques_for_me,cliques)
+
+        splitting_indices = compute_splitting_idx(length(cliques),proc_count)
+
+
+        #
+        #  --  collect clique splitting samples  --  #
+        #
+        all_data = cliques[splitting_indices]
+        all_data = gather(all_data,gather_comm)
+        if gather_comm.sending_to === nothing
+            #process the correct splittings and broadcast them 
+            all_data = vcat(all_data...)
+            sort!(all_data)
+            splitting_indices = compute_splitting_idx(length(all_data),proc_count)
+            final_splittings = all_data[splitting_indices]
+        end
+
+
+        #
+        #  --  send final clique splittings  --  #  
+        #
+        if bcast_comm.receiving_from === nothing
+            broadcast(final_splittings,bcast_comm)
+        else
+            final_splittings = broadcast(nothing,bcast_comm)
+        end
+
+        #  --  determine which cliques should be sent to which processors --  # 
+
+        start_idx_for_processors[1] = 1 
+        end_idx_for_processors[end] = length(cliques)
+        split_idx = 1
+
+        idx = 1 
+        for edge_split in final_splittings
+            
+            while cliques[idx] < edge_split
+                idx +=1 
+            end
+            start_idx_for_processors[split_idx+1] = idx
+            end_idx_for_processors[split_idx] = idx -1  
+            split_idx += 1
+        end
+
+        #check if previously collected cliques are still valid 
+
+
+
+        #
+        #  --  send all cliques to the correct processors  --  #
+        #
+
+        cliques_for_me = cliques[start_idx_for_processors[pa2a_comm.my_idx]:end_idx_for_processors[pa2a_comm.my_idx]]
+
+        #method doens't use built in function to avoid duplicating things in memory 
+        for (i,(idx,channel)) in enumerate(pa2a_comm.sending_to)
+            put!(channel,(pa2a_comm.my_idx,cliques[start_idx_for_processors[idx]:end_idx_for_processors[idx]]))
+        end 
+
+        data_taken = 1 
+        while data_taken <= length(pa2a_comm.sending_to)
+            (_,their_data) = take!(pa2a_comm.my_channel)
+            append!(cliques_for_me,their_data)
+            data_taken += 1 
+        end 
+
+
+        reduce_to_unique_cliques!(cliques_for_me)
+
+        found_more_q = (length(cliques_for_me) > prev_found_cliques)
+        reduction_f = (q1,q2) -> q1 || q2 
+        continue_loop_q = all_to_all_reduce(reduction_f,found_more_q,ra2a_comm)
+                        # check if no processors found new cliques 
+        if continue_loop_q 
+            samples *= 5
+            prev_found_cliques = length(cliques_for_me)
+            #cliques = cliques_for_me
+        else
+            break
+        end 
+    end 
+
+    if typeof(atAnd) === returnToSpawner
+        idx = pa2a_comm.my_idx
+        if idx == 1 
+            start_cliques  = cliques_for_me[1]
+            end_cliques  = final_splittings[1]
+        elseif idx == length(pids)
+            start_cliques = final_splittings[end]
+            end_cliques  = cliques_for_me[end]
+        else
+            start_cliques  =  final_splittings[idx-1]
+            end_cliques  = final_splittings[idx]
+        end
+
+        return cliques_for_me, (start_cliques , end_cliques)
+
+    elseif typeof(atAnd) === writeFile
+        #
+        #   Compute the total number of cliques found and reuse the gather channels to reduce 
+        #
+
+        clique_count = [[[length(cliques_for_me)]]]
+        for channel in reverse(gather_comm.receiving_from)
+            their_counts = take!(channel)
+            clique_count[1][1][1] += their_counts[1][1][1]
+        end
+
+        if gather_comm.sending_to !== nothing
+            put!(gather_comm.sending_to,clique_count)
+        end
+
+
+
+        #
+        #  Create the ssten file serially 
+        #
+        if pa2a_comm.my_idx == 1
+
+            write_ssten(cliques_for_me, size(A,1), ssten_filename,clique_count[1][1][1])
+            put!(serialized_write_channel,(1,[[1]]))
+
+        else #wait for a message from the p_a2a channel before appending 
+
+            take!(pa2a_comm.my_channel)
+            append_to_ssten(cliques_for_me,ssten_filename)
+            if pa2a_comm.my_idx < length(pids) 
+                put!(serialized_write_channel,(1,[[1]]))
+            end 
+
+        end
+        return
+    end
+
+end
+
+
+
+
+
+
 #
 #  Spawning Drivers
 #
@@ -403,6 +567,46 @@ function distributed_clique_sample(pids, matrix_file, ssten_filename, order, sam
     return all_vals
 end
 
+function distributed_find_all_cliques(pids, matrix_file, ssten_filename, order, init_samples,profile=false)
+
+    collection_idx = 1
+
+    init_samples_per_proc = Int(ceil(init_samples/length(pids)))
+
+    gather_comm = gather_communication(pids,collection_idx,[[1]])
+    bcast_comm = broadcast_communication(pids,collection_idx,[[1]])
+    pa2a_comm = personalized_all_to_all_communication(pids,[[1]])
+    ra2a_comm = all_to_all_reduction_communication(pids,true)
+
+
+    futures = []
+    for p = 1:length(pids)
+        if p == length(pids)
+            serialization_channel = nothing 
+        else
+            serialization_channel = pa2a_comm[p+1].my_channel
+        end 
+        if profile 
+            throw(error("Unimplemented"))
+        else
+            future = @spawnat pids[p] parallel_find_all_clique_proc(matrix_file, order, init_samples_per_proc, pids, ssten_filename,
+                                                                            gather_comm[p], bcast_comm[p], pa2a_comm[p],ra2a_comm[p],
+                                                                            serialization_channel)
+        end
+        push!(futures,future)
+    end
+    all_vals = []
+
+    for future in futures
+        f = fetch(future)
+        if isa(f,RemoteException)
+            throw(f)
+        end
+        push!(all_vals,f)
+    end    
+
+    return all_vals
+end
 
 
 #
@@ -521,4 +725,44 @@ function reduce_to_unique_cliques!(cliques::Array{Array{T,1},1}) where {T <: Int
 
     
 end
+
+
+
+function merge_clique_lists(cliques1,cliques2)
+    consolidated_cliques =  Vector{Vector{Int}}(undef,0)
+    merge_clique_lists!(consolidated_cliques,cliques1,cliques2)
+    return consolidated_cliques
+end
+
+function merge_clique_lists!(consolidated_cliques,
+                             cliques1, cliques2)
+
+    head1 = 1
+    head2 = 1 
+
+    while head1 <= length(cliques1) && head2 <= length(cliques2)
+
+        if cliques1[head1] < cliques2[head2]
+            push!(consolidated_cliques,cliques1[head1])
+            head1 += 1
+        elseif cliques1[head1] > cliques2[head2]
+            push!(consolidated_cliques,cliques2[head2])
+            head2 += 1 
+        else # equal 
+            push!(consolidated_cliques,cliques1[head1])
+            head1 += 1 
+            head2 += 1 
+        end
+    end 
+    
+    #add the remaining left 
+
+    if head1 <= length(cliques1)
+        append!(consolidated_cliques,cliques1[head1:end])
+    end 
+
+    if head2 <= length(cliques2)
+        append!(consolidated_cliques,cliques2[head2:end])
+    end 
+end 
 
