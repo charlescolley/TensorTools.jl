@@ -27,7 +27,7 @@ include("hard_coded_contractions.jl")
     @inferred contract_to_mat_divide_out(clique_unweighted_tensors[end],x)
     @inferred contract_to_mat_divide_out(clique_weighted_tensors[end],x)
 
-    #@inferred DTC.contraction_divide_out!(cycle_tensors[end],x,y_divide_out)
+    #@inferred T.contraction_divide_out!(cycle_tensors[end],x,y_divide_out)
     @inferred contraction(cycle_unweighted_tensors[end],x)
     @inferred embedded_contraction!(cycle_unweighted_tensors[1], x,y,4)
 
@@ -50,15 +50,15 @@ end
                 y_naive = zeros(n)
                 y_divide_out = zeros(n)
 
-                DTC.contraction_divide_out!(tensor,x,y_divide_out)
-                DTC.contraction!(tensor,x,y_naive)
+                T.contraction_divide_out!(tensor,x,y_divide_out)
+                T.contraction!(tensor,x,y_naive)
 
                 @test norm(y_divide_out - y_naive)/norm(y_divide_out) < TOL
 
                 y_naive = zeros(n)
                 y_divide_out = zeros(n)
-                DTC.contraction_divide_out!(tensor,x2,y_divide_out)
-                DTC.contraction!(tensor,x2,y_naive)
+                T.contraction_divide_out!(tensor,x2,y_divide_out)
+                T.contraction!(tensor,x2,y_naive)
                 @test norm(y_divide_out - y_naive)/norm(y_divide_out) < TOL
             end
         end
@@ -69,25 +69,25 @@ end
         y_hc = zeros(n)
         y = zeros(n)
         third_order_contraction!(unweighted_tensors[1].indices, x,y_hc)
-        DTC.contraction_divide_out!(unweighted_tensors[1], x,y)
+        T.contraction_divide_out!(unweighted_tensors[1], x,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
         fourth_order_contraction!(unweighted_tensors[2].indices, x,y_hc)
-        DTC.contraction_divide_out!(unweighted_tensors[2], x,y)
+        T.contraction_divide_out!(unweighted_tensors[2], x,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
         third_order_contraction!(unweighted_tensors[1].indices, x2,y_hc)
-        DTC.contraction_divide_out!(unweighted_tensors[1], x2,y)
+        T.contraction_divide_out!(unweighted_tensors[1], x2,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
         fourth_order_contraction!(unweighted_tensors[2].indices, x2,y_hc)
-        DTC.contraction_divide_out!(unweighted_tensors[2], x2,y)
+        T.contraction_divide_out!(unweighted_tensors[2], x2,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
     end
@@ -129,25 +129,25 @@ end
         y_hc = zeros(n)
         y = zeros(n)
         third_order_contraction!(rand_weighted_tensors[1].indices,rand_weighted_tensors[1].weights, x,y_hc)
-        DTC.contraction_divide_out!(rand_weighted_tensors[1], x,y)
+        T.contraction_divide_out!(rand_weighted_tensors[1], x,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
         fourth_order_contraction!(rand_weighted_tensors[2].indices,rand_weighted_tensors[2].weights, x,y_hc)
-        DTC.contraction_divide_out!(rand_weighted_tensors[2], x,y)
+        T.contraction_divide_out!(rand_weighted_tensors[2], x,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
         third_order_contraction!(rand_weighted_tensors[1].indices,rand_weighted_tensors[1].weights, x2,y_hc)
-        DTC.contraction_divide_out!(rand_weighted_tensors[1], x2,y)
+        T.contraction_divide_out!(rand_weighted_tensors[1], x2,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
         fourth_order_contraction!(rand_weighted_tensors[2].indices,rand_weighted_tensors[2].weights, x2,y_hc)
-        DTC.contraction_divide_out!(rand_weighted_tensors[2], x2,y)
+        T.contraction_divide_out!(rand_weighted_tensors[2], x2,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
     end
@@ -171,14 +171,14 @@ end
         y_hc = zeros(n)
         y = zeros(n)
 
-        DTC.embedded_contraction!(unweighted_tensors[1], x,y,4)
+        T.embedded_contraction!(unweighted_tensors[1], x,y,4)
         third_order_encoded_into_fourth_order_contraction!(unweighted_tensors[1].indices,x,y_hc)
         @test norm(y - y_hc)/norm(y) < TOL
 
         y_hc = zeros(n)
         y = zeros(n)
 
-        DTC.embedded_contraction!(unweighted_tensors[1], x2,y,4)
+        T.embedded_contraction!(unweighted_tensors[1], x2,y,4)
         third_order_encoded_into_fourth_order_contraction!(unweighted_tensors[1].indices,x2,y_hc)
         @test norm(y - y_hc)/norm(y) < TOL
     end
@@ -189,7 +189,7 @@ end
         y = zeros(n)
 
         contract_multi_motif_tensor!(unweighted_tensors[1].indices, unweighted_tensors[2].indices,x,y_hc)
-        DTC.contraction_divide_out!(unweighted_tensors[1:2],x,y)
+        T.contraction_divide_out!(unweighted_tensors[1:2],x,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
 
@@ -197,7 +197,7 @@ end
         y = zeros(n)
 
         contract_multi_motif_tensor!(unweighted_tensors[1].indices, unweighted_tensors[2].indices,x2,y_hc)
-        DTC.contraction_divide_out!(unweighted_tensors[1:2],x2,y)
+        T.contraction_divide_out!(unweighted_tensors[1:2],x2,y)
         @test norm(y - y_hc)/norm(y) < TOL
 
     end

@@ -1,4 +1,4 @@
-name = "DistributedTensorConstruction"
+name = "TensorTools"
 uuid = "776de601-c331-4922-91fc-ee89788146c7"
 authors = ["Charles Colley <ccolley@purdue.edu>"]
 version = "0.0.0"
@@ -15,6 +15,7 @@ MatrixNetworks = "4f449596-a032-5618-b826-5a251cb6dc11"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+RemoteChannelCollectives = "a266ee27-82b6-4f16-8ad1-7571abaf7137"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 

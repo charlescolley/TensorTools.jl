@@ -12,8 +12,8 @@ import LinearAlgebra:norm
 #assuming being run from test/ folder
 #include("../src/LambdaTAME.jl")
 
-using DistributedTensorConstruction
-const DTC = DistributedTensorConstruction
+using TensorTools
+const T = TensorTools
 
 seed!(54321)
 n= 10
@@ -39,12 +39,12 @@ macro test_nothrow(ex)
 end
 
 addprocs(7)
-@everywhere using DistributedTensorConstruction
+@everywhere using TensorTools
 
 include("distributedTuranShadow_tests.jl")
-#include("fileio_tests.jl")
-#include("tensorConstruction_tests.jl")
-#include("contraction_tests.jl")
+include("fileio_tests.jl")
+include("tensorConstruction_tests.jl")
+include("contraction_tests.jl")
 #include("MPI_tests.jl")
 
 

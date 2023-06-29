@@ -1,8 +1,5 @@
-@everywhere using DistributedTensorConstruction
-@everywhere using DistributedTensorConstruction: parallel_clique_sampling_proc, parallel_clique_sampling_proc_profiled, 
+@everywhere using TensorTools: parallel_clique_sampling_proc, parallel_clique_sampling_proc_profiled, 
                                      parallel_find_all_clique_proc
-
-#using DistributedTensorConstruction: check_lower_bound, check_upper_bound
 
 @testset "Distributed Turan Shadow Tests" begin
 
@@ -13,9 +10,9 @@
 
 
         collection_idx = 1
-        gather_comm = gather_communication(pids,collection_idx,[[1]])
-        bcast_comm = broadcast_communication(pids,collection_idx,[[1]])
-        pa2a_comm = personalized_all_to_all_communication(pids,[[1]])
+        gather_comm = T.gather_communication(pids,collection_idx,[[1]])
+        bcast_comm = T.broadcast_communication(pids,collection_idx,[[1]])
+        pa2a_comm = T.personalized_all_to_all_communication(pids,[[1]])
 
         futures = []
         for p = 1:length(pids)
@@ -26,10 +23,9 @@
                 serialization_channel = pa2a_comm[p+1].my_channel
             end 
 
-            future = @spawnat pids[p] DistributedTensorConstruction.parallel_clique_sampling_proc(
-                                            test_smat_file,order,samples,pids, "test.ssten",
-                                            gather_comm[p],bcast_comm[p],pa2a_comm[p],
-                                            serialization_channel,returnToSpawner())
+            future = @spawnat pids[p] parallel_clique_sampling_proc(test_smat_file,order,samples,pids, "test.ssten",
+                                                                    gather_comm[p],bcast_comm[p],pa2a_comm[p],
+                                                                    serialization_channel,returnToSpawner())
             push!(futures,future)
         end
 
@@ -73,10 +69,10 @@
 
             collection_idx = 1
             init_samples_per_proc =1000
-            gather_comm = gather_communication(pids,collection_idx,[[1]])
-            bcast_comm = broadcast_communication(pids,collection_idx,[[1]])
-            pa2a_comm = personalized_all_to_all_communication(pids,[[1]])
-            ra2a_comm = all_to_all_reduction_communication(pids,true)
+            gather_comm = T.gather_communication(pids,collection_idx,[[1]])
+            bcast_comm = T.broadcast_communication(pids,collection_idx,[[1]])
+            pa2a_comm = T.personalized_all_to_all_communication(pids,[[1]])
+            ra2a_comm = T.all_to_all_reduction_communication(pids,true)
 
             futures = []
             for p = 1:length(pids)

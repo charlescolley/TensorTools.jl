@@ -1,5 +1,5 @@
 
-module DistributedTensorConstruction 
+module TensorTools
 
 include("externalSoftware/TuranShadow.jl")
 
@@ -16,6 +16,7 @@ using Random
 using MatrixNetworks
 using LightGraphs
 using Distributed
+using RemoteChannelCollectives
 
 # -- contractions.jl -- #
 using Combinatorics:integer_partitions,permutations, multinomial, combinations
@@ -24,12 +25,6 @@ using Combinatorics:integer_partitions,permutations, multinomial, combinations
 #@pyimport pickle
 
 #NOTE: keeping @pyimport currently triggers compilation error "ERROR: LoadError: Evaluation into the closed module `__anon__`..."
-
-# struct SymTensorUnweighted
-#     n::Int
-#     order::Int
-#     indices::Array{Int,2}
-# end
 
 abstract type Motif  end
 struct Clique <: Motif end
@@ -49,10 +44,6 @@ struct SymTensor{T <: Motif,S}
     SymTensor{T}(n::Int,order::Int,indices::Matrix{Int},weights::Vector{S}) where {T<:Motif,S} = new{T,S}(n,order,indices,weights)
 end
 
-abstract type Communication end
-
-#TODO: rethink naming
-
 #struct TensorComplexUnweighted
 #    tensors::Array{SymTensorUnweighted,1}
 #end
@@ -65,15 +56,7 @@ abstract type Communication end
 
 include("fileio.jl")
 include("tensorConstruction.jl")
-
-#include("communication.jl")
 include("contraction.jl")
-include("MPI/shared_mpi.jl")
-include("MPI/gather.jl")
-include("MPI/broadcast.jl")
-include("MPI/personalized_all_to_all.jl")
-include("MPI/all_to_all_reduce.jl")
-
 include("distributedTuranShadow.jl")
 
 
@@ -82,17 +65,8 @@ include("distributedTuranShadow.jl")
 export SymTensorUnweighted, SymTensor, TensorComplexUnweighted
 export Motif, Clique, Cycle 
 
-export all_to_all_reduce_comm, all_to_all_reduce, all_to_all_reduction_communication
-export broadcast_comm, broadcast_communication, broadcast, broadcast_profiled
-export gather_comm, gather_communication, gather, gather_profiled
-export personalized_all_to_all_comm, personalized_all_to_all_communication, personalized_all_to_all, personalized_all_to_all_profiled
-export all_to_all_reduce_comm, all_to_all_reduction_communication, all_to_all_reduce
-
 export endBehavior,returnToSpawner, writeFile
 export distributed_clique_sample, distributed_sample_smat_files, distributed_find_all_cliques
-
-export all_to_all_reduce_comm, all_to_all_reduction_communication, all_to_all_reduce
-export broadcast_comm, broadcast_communication, broadcast, broadcast_profiled
 
 export tensor_from_graph, tensors_from_graph
 export load_SymTensorUnweighted
