@@ -3,7 +3,7 @@
 #
 
 #TODO: test
-function contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1}) where T 
+function contraction!(A::SymTensorUnweighted{Clique}, x::AbstractVector{T},y::AbstractVector{T}) where T 
 
     order, edges = size(A.indices)
 
@@ -26,7 +26,7 @@ function contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1
     end
 end
 
-function contraction!(A::SymTensor{Clique}, x::Array{T,1},y::Array{T,1}) where T 
+function contraction!(A::SymTensor{Clique}, x::AbstractVector{T},y::AbstractVector{T}) where T 
 
     order, edges = size(A.indices)
 
@@ -52,7 +52,7 @@ end
 
 
 #TODO: test
-function contraction_divide_out!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1}) where T 
+function contraction_divide_out!(A::SymTensorUnweighted{Clique}, x::AbstractVector{T},y::AbstractVector{T}) where T 
 
     order, edges = size(A.indices)
     scaling_factor = factorial(order-1)
@@ -69,7 +69,7 @@ function contraction_divide_out!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y
     end
 end
 
-function contraction_divide_out!(A::SymTensor{Clique}, x::Array{T,1},y::Array{T,1}) where T 
+function contraction_divide_out!(A::SymTensor{Clique}, x::AbstractVector{T},y::AbstractVector{T}) where T 
 
     order, edges = size(A.indices)
     scaling_factor = factorial(order-1)
@@ -94,14 +94,13 @@ function contraction_divide_out!(simplicial_complexes::Union{Vector{SymTensorUnw
     end
 end
 
-function contract_to_mat(A_ten::SymTensorUnweighted{Clique},x::Array{T}) where T
+function contract_to_mat(A_ten::SymTensorUnweighted{Clique},x::AbstractVector{T}) where T
 
     scaling_factor = factorial(A_ten.order-2)
     binom_factor = binomial(A_ten.order,A_ten.order-2)
     is = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
     js = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
     vs = Array{T}(undef, binom_factor*size(A_ten.indices, 2))
-
     new_edge_idx = 1 
 
     for edge_idx = 1:size(A_ten.indices,2)
@@ -129,14 +128,13 @@ function contract_to_mat(A_ten::SymTensorUnweighted{Clique},x::Array{T}) where T
         # expecting diag(A) = \vec{0}
 end
 
-function contract_to_mat(A_ten::SymTensor{Clique},x::Array{T}) where T
+function contract_to_mat(A_ten::SymTensor{Clique},x::AbstractVector{T}) where T
 
     scaling_factor = factorial(A_ten.order-2)
     binom_factor = binomial(A_ten.order,A_ten.order-2)
     is = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
     js = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
     vs = Array{T}(undef, binom_factor*size(A_ten.indices, 2))
-
     new_edge_idx = 1 
 
     for edge_idx = 1:size(A_ten.indices,2)
@@ -164,7 +162,7 @@ function contract_to_mat(A_ten::SymTensor{Clique},x::Array{T}) where T
         # expecting diag(A) = \vec{0}
 end
 
-function contract_to_mat_divide_out(A_ten::SymTensorUnweighted{Clique},x::Array{T}) where T
+function contract_to_mat_divide_out(A_ten::SymTensorUnweighted{Clique},x::AbstractVector{T}) where T
 
     scaling_factor = factorial(A_ten.order-2)
     binom_factor = binomial(A_ten.order,A_ten.order-2)
@@ -204,7 +202,7 @@ function contract_to_mat_divide_out(A_ten::SymTensorUnweighted{Clique},x::Array{
         # expecting diag(A) = \vec{0}
 end
 
-function contract_to_mat_divide_out(A_ten::SymTensor{Clique},x::Array{T}) where T
+function contract_to_mat_divide_out(A_ten::SymTensor{Clique},x::AbstractVector{T}) where T
 
     scaling_factor = factorial(A_ten.order-2)
     binom_factor = binomial(A_ten.order,A_ten.order-2)
@@ -244,7 +242,7 @@ function contract_to_mat_divide_out(A_ten::SymTensor{Clique},x::Array{T}) where 
         # expecting diag(A) = \vec{0}
 end
 
-function single_mode_ttv(A::SymTensorUnweighted{Clique},x::Vector{T}) where T
+function single_mode_ttv(A::SymTensorUnweighted{Clique},x::AbstractVector{T}) where T
     #=
         Only computes a contraction for a single mode. Helpful for low rank 
         contraction. This version uses vector version of subedges to make it 
@@ -280,7 +278,7 @@ function single_mode_ttv(A::SymTensorUnweighted{Clique},x::Vector{T}) where T
     return SymTensor{Clique}(A.n,A.order-1,indices,weights)
 end
 
-function single_mode_ttv(A::SymTensor{Clique},x::Vector{T}) where T
+function single_mode_ttv(A::SymTensor{Clique},x::AbstractVector{T}) where T
     #=
         Only computes a contraction for a single mode. Helpful for low rank 
         contraction. This version uses vector version of subedges to make it 
@@ -355,7 +353,7 @@ function reduce_to_unique_edges(new_subedges::Vector{Tuple{Vector{Int},T}}) wher
 end
 
 
-function embedded_contraction!(A::SymTensorUnweighted{Clique}, x::Array{T,1},y::Array{T,1},embedded_mode::Int) where T
+function embedded_contraction!(A::SymTensorUnweighted{Clique}, x::AbstractVector{T},y::AbstractVector{T},embedded_mode::Int) where T
 
     order,edges = size(A.indices)
     #@assert order == 3
@@ -493,7 +491,7 @@ end
 #    Cycle based contraction routines
 #
 
-function contraction!(A::SymTensorUnweighted{Cycle}, x::Array{T,1},y::Array{T,1}) where T
+function contraction!(A::SymTensorUnweighted{Cycle}, x::AbstractVector{T},y::AbstractVector{T}) where T
 
     order, edges = size(A.indices)
 
@@ -515,7 +513,7 @@ function contraction!(A::SymTensorUnweighted{Cycle}, x::Array{T,1},y::Array{T,1}
 end
 
 
-function embedded_contraction!(A::SymTensorUnweighted{Cycle}, x::Array{T,1},y::Array{T,1},embedded_mode::Int) where T
+function embedded_contraction!(A::SymTensorUnweighted{Cycle}, x::AbstractVector{T},y::AbstractVector{T},embedded_mode::Int) where T
 
     order,edges = size(A.indices)
     #@assert order == 3
@@ -568,7 +566,7 @@ end
 #  Duck Typed Allocators
 #
 
-function contraction(A, x::Array{T,1}) where T 
+function contraction(A, x::AbstractVector{T}) where T 
 
     # using length of x rather than A.n to make more robust against different types of A 
     y = zeros(T,length(x))
@@ -576,14 +574,14 @@ function contraction(A, x::Array{T,1}) where T
     return y 
 end
 
-function embedded_contraction(A, x::Array{T,1}) where T 
+function embedded_contraction(A, x::AbstractVector{T}) where T 
     # using length of x rather than A.n to make more robust against different types of A 
     y = zeros(T,length(x))
     embedded_contraction!(A, x, y)
     return y 
 end
 
-function contraction_divide_out(A, x::Array{T,1}) where T 
+function contraction_divide_out(A, x::AbstractVector{T}) where T 
     # using length of x rather than A.n to make more robust against different types of A 
     y = zeros(T,length(x))
     contraction_divide_out!(A, x, y)
