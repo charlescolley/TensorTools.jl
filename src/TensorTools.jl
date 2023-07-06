@@ -71,7 +71,7 @@ export distributed_clique_sample, distributed_sample_smat_files, distributed_fin
 export tensor_from_graph, tensors_from_graph
 export load_SymTensorUnweighted
 export contraction_divide_out!, embedded_contraction!, contraction!, contraction_divide_out, embedded_contraction, contraction
-export contract_to_mat, contract_to_mat_divide_out
+export contract_to_mat, contract_to_mat!, contract_to_mat_divide_out
 export single_mode_ttv
 export contract_all_unique_permutations
 

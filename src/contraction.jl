@@ -94,13 +94,20 @@ function contraction_divide_out!(simplicial_complexes::Union{Vector{SymTensorUnw
     end
 end
 
-function contract_to_mat(A_ten::SymTensorUnweighted{Clique},x::AbstractVector{T}) where T
+function contract_to_mat(A_ten,x::AbstractVector{T}) where T
 
-    scaling_factor = factorial(A_ten.order-2)
+
     binom_factor = binomial(A_ten.order,A_ten.order-2)
     is = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
     js = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
     vs = Array{T}(undef, binom_factor*size(A_ten.indices, 2))
+
+    return contract_to_mat!(A_ten,x,is,js,vs)
+end 
+
+function contract_to_mat!(A_ten::SymTensorUnweighted{Clique},x::AbstractVector{T},is,js,vs) where T
+
+    scaling_factor = factorial(A_ten.order-2)
     new_edge_idx = 1 
 
     for edge_idx = 1:size(A_ten.indices,2)
@@ -123,18 +130,13 @@ function contract_to_mat(A_ten::SymTensorUnweighted{Clique},x::AbstractVector{T}
         end
     
     end 
-    A = sparse(is,js,vs,A_ten.n,A_ten.n)
-    return A + A' 
-        # expecting diag(A) = \vec{0}
+    return Symmetric(sparse(is,js,vs,A_ten.n,A_ten.n))
+            # expecting diag(A) = \vec{0}
 end
 
-function contract_to_mat(A_ten::SymTensor{Clique},x::AbstractVector{T}) where T
+function contract_to_mat!(A_ten::SymTensor{Clique},x::AbstractVector{T},is,js,vs) where T
 
     scaling_factor = factorial(A_ten.order-2)
-    binom_factor = binomial(A_ten.order,A_ten.order-2)
-    is = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
-    js = Array{Int}(undef, binom_factor*size(A_ten.indices, 2))
-    vs = Array{T}(undef, binom_factor*size(A_ten.indices, 2))
     new_edge_idx = 1 
 
     for edge_idx = 1:size(A_ten.indices,2)
@@ -157,8 +159,7 @@ function contract_to_mat(A_ten::SymTensor{Clique},x::AbstractVector{T}) where T
         end
     
     end 
-    A = sparse(is,js,vs,A_ten.n,A_ten.n)
-    return A + A' 
+    return Symmetric(sparse(is,js,vs,A_ten.n,A_ten.n))
         # expecting diag(A) = \vec{0}
 end
 
@@ -197,8 +198,7 @@ function contract_to_mat_divide_out(A_ten::SymTensorUnweighted{Clique},x::Abstra
             val *= x[A_ten.indices[i,edge_idx]]
         end
     end 
-    A = sparse(is,js,vs,A_ten.n,A_ten.n)
-    return A + A' 
+    return Symmetric(sparse(is,js,vs,A_ten.n,A_ten.n))
         # expecting diag(A) = \vec{0}
 end
 
@@ -237,8 +237,7 @@ function contract_to_mat_divide_out(A_ten::SymTensor{Clique},x::AbstractVector{T
             val *= x[A_ten.indices[i,edge_idx]]
         end
     end 
-    A = sparse(is,js,vs,A_ten.n,A_ten.n)
-    return A + A' 
+    return Symmetric(sparse(is,js,vs,A_ten.n,A_ten.n))
         # expecting diag(A) = \vec{0}
 end
 
