@@ -352,44 +352,66 @@ function reduce_to_unique_edges(new_subedges::Vector{Tuple{Vector{Int},T}}) wher
 end
 
 
+function clique_multiplicity_generation(order,embedded_mode)
+    embedded_edge_idx = 0
+    
+    #count total entries
+    count = 0
+    for partition in partitions(embedded_mode,order) 
+        #for x in unique(permutations(partition))
+        for _ in multiset_permutations(partition,order)
+            count += 1 
+        end 
+    end 
+
+    multiplicities = Array{Int,2}(undef,order,count)
+    scaling_factors = Array{Int,2}(undef,order,count)
+
+    for partition in partitions(embedded_mode,order) 
+        #for x in unique(permutations(partition))
+        for x in multiset_permutations(partition,order)
+            embedded_edge_idx += 1 
+            for (i,power) in enumerate(x)
+                multiplicities[i,embedded_edge_idx] = power
+            end 
+        end 
+    end 
+
+    row = similar(multiplicities[:,1])
+    for j =1:embedded_edge_idx
+        for i=1:order
+
+            for k=1:order 
+                row[k] = multiplicities[k,j]
+            end
+
+            row[i] -= 1
+            scaling_factors[i,j] = multinomial(row...)
+        end
+    end
+
+    multiplicities, scaling_factors
+
+end 
+
 function embedded_contraction!(A::SymTensorUnweighted{Clique}, x::AbstractVector{T},y::AbstractVector{T},embedded_mode::Int) where T
 
     order,edges = size(A.indices)
-    #@assert order == 3
 
-    # compute contraction template
-    partition::Vector{Vector{Int}} = [ x for x in integer_partitions(embedded_mode - order) if length(x) <= order]
-    #println(partition)
-    partition = [length(y) < order ? vcat(y,zeros(Int,order - length(y))) : y  for y in partition]
-                     #pad the entries to all have the same length
-    partition = [x .+= 1 for x in partition]
-    
-    multiplicities::Array{Array{Int,1},1} = unique(hcat([collect(permutations(y)) for y in partition]...))
-
-    scaling_factors = Array{Int,2}(undef,order,length(multiplicities))
-    for i =1:length(multiplicities)
-        for j=1:order
-            row = copy(multiplicities[i])
-            row[j] -= 1
-            scaling_factors[j,i] = multinomial(row...)
-        end
-        #push!(scaling_factors,row_factors)
-    end
-
-    #return partition, scaling_factors
+    multiplicities, scaling_factors = clique_multiplicity_generation(order,embedded_mode)
 
     for idx =1:edges
 
-        for idx2 =1:length(multiplicities)
+        for idx2 =1:size(multiplicities,2)
             for idx3 =1:order
                 val::Float64 = scaling_factors[idx3,idx2]
 
                 for idx4=1:idx3-1
-                    val *= x[A.indices[idx4,idx]]^multiplicities[idx2][idx4]
+                    val *= x[A.indices[idx4,idx]]^multiplicities[idx4,idx2]
                 end
-                val *= x[A.indices[idx3,idx]]^(multiplicities[idx2][idx3] -1)
+                val *= x[A.indices[idx3,idx]]^(multiplicities[idx3,idx2] -1)
                 for idx4=idx3+1:order
-                    val *= x[A.indices[idx4,idx]]^multiplicities[idx2][idx4]
+                    val *= x[A.indices[idx4,idx]]^multiplicities[idx4,idx2]
                 end
 
                 y[A.indices[idx3,idx]] += val
@@ -397,6 +419,8 @@ function embedded_contraction!(A::SymTensorUnweighted{Clique}, x::AbstractVector
         end
     
     end
+
+
 end
 
 function embedded_contraction!(simplicial_complexes::Array{SymTensorUnweighted{S},1},x, y) where {S <: Motif}
@@ -409,7 +433,9 @@ function embedded_contraction!(simplicial_complexes::Array{SymTensorUnweighted{S
             #contraction_divide_out!(simplicial_complexes[i],x,y)
             contraction!(simplicial_complexes[i],x,y)
         else
+            #println("order: $(simplicial_complexes[i].order) in max order:$(max_order)")
             embedded_contraction!(simplicial_complexes[i],x,y,max_order)
+            #println()
         end
     end
 end
@@ -518,10 +544,11 @@ function embedded_contraction!(A::SymTensorUnweighted{Cycle}, x::AbstractVector{
     #@assert order == 3
 
     # compute contraction template
+ 
     partition = [ x for x in integer_partitions(embedded_mode - order) if length(x) <= order]
     #println(partition)
     partition = [length(y) < order ? vcat(y,zeros(Int,order - length(y))) : y  for y in partition]
-                     #pad the entries to all have the same length
+                    #pad the entries to all have the same length
     partition = [x .+= 1 for x in partition]
     
     multiplicities::Array{Array{Integer,1},1} = unique(hcat([collect(permutations(y)) for y in partition]...))

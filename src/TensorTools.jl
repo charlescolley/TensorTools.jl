@@ -19,7 +19,7 @@ using Distributed
 using RemoteChannelCollectives
 
 # -- contractions.jl -- #
-using Combinatorics:integer_partitions,permutations, multinomial, combinations
+using Combinatorics:integer_partitions,permutations, multinomial, combinations,  partitions, multiset_permutations
 
 #using PyCall
 #@pyimport pickle
@@ -57,6 +57,7 @@ end
 include("fileio.jl")
 include("tensorConstruction.jl")
 include("contraction.jl")
+export partitions
 include("distributedTuranShadow.jl")
 
 
