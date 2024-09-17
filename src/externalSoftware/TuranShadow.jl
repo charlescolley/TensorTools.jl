@@ -136,7 +136,6 @@ end
 
 
 
-
 # Use the bound in the paper to compute the number of samples. 
 # ε is the error factor of how many cliques are sampled to how many are in the graph 
 # | ˆCk − |Ck (G)|| ≤ ε|Ck (G)|.
@@ -150,7 +149,7 @@ function TuranShadow_samples(A::SparseMatrixCSC{F,Int64},k::Int,ε::Float64,δ::
     S = shadow_finder(A,k)
     γ = 1/maximum( (ℯ^shadow.k)/sqrt(2*π*(shadow.k)^5)*(length(shadow.vertices))^2 for shadow in S) 
                   # using Stirling's approximation to estimate  k^(k−2)/k!.
-    samples = (20/(γ*(ε)^2))*log(1/δ)
+    samples = Int(ceil((20/(γ*(ε)^2))*log(1/δ)))
     return S, γ, samples
 end 
 
