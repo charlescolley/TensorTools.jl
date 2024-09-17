@@ -1,41 +1,74 @@
 
-
 #
 #    Clique Motif Routines
 #
 
-function tensors_from_graph(A, orders::Array{Int,1}, sample_size::Int, motif::Clique)
+#  -- Multiple Tensor Generation
 
+function tensors_from_graph(A, orders::Array{Int,1}, ε::Float64, δ::Float64, motif::Clique)
+    
+    estimated_total_cliques = Array{Float64,1}(undef,length(orders))
+    samples_used = Array{Float64,1}(undef,length(orders))
     tensors = Array{SymTensorUnweighted{Clique},1}(undef,length(orders))
 
     for (i,order) in enumerate(orders)
-        tensor = tensor_from_graph(A, order, sample_size,motif)
-        tensors[i] = tensor
+        tensors[i], estimated_total_cliques[i], samples_used[i] = tensor_from_graph(A, order,  ε, δ, motif)
     end
 
-    return tensors
+    return tensors, estimated_total_cliques, samples_used
 
+end
+
+function tensors_from_graph(A, orders::Array{Int,1}, samples::Int, motif::Clique)
+    
+    estimated_total_cliques = Array{Float64,1}(undef,length(orders))
+    tensors = Array{SymTensorUnweighted{Clique},1}(undef,length(orders))
+
+    for (i,order) in enumerate(orders)
+        tensors[i], estimated_total_cliques[i] = tensor_from_graph(A, order, samples, motif)
+    end
+
+    return tensors, estimated_total_cliques
 end
 
 function tensors_from_graph(A, orders::Array{Int,1}, sample_sizes::Array{Int,1}, motif::Clique)
 
     @assert length(orders) == length(sample_sizes)
     tensors = Array{SymTensorUnweighted{Clique},1}(undef,length(orders))
+    estimated_total_cliques = Array{Int,1}(undef,length(orders))
+
 
     for (i,(order,sample)) in enumerate(zip(orders,sample_sizes))
         if order == 2
             tensors[i] = matrix_to_SymTensorUnweighted(A, motif)
+            estimated_total_cliques[i] = -1
         else
-            tensors[i] = tensor_from_graph(A, order, sample, motif)
+            tensors[i],estimated_total_cliques[i] = tensor_from_graph(A, order, sample, motif)
         end
     end
 
-    return tensors
+    return tensors, estimated_total_cliques
+end
+
+#  -- Single Tensor Generation
+
+function tensor_from_graph(A, order, ε::Float64, δ::Float64, motif::Clique)
+    samples_used, estimated_total_cliques::Float64, all_cliques::Array{Array{Int64,1},1} = TuranShadow(A,order,ε,δ)
+    reduce_to_unique_cliques!(all_cliques)
+
+    indices = Array{Int,2}(undef,order,length(all_cliques))
+    idx = 1
+    for clique in all_cliques #is there a better way to do this? 
+        indices[:,idx] = clique
+        idx += 1;
+    end
+
+    return SymTensorUnweighted{Clique}(size(A,1),order,round.(Int,indices)), estimated_total_cliques, samples_used
 end
 
 function tensor_from_graph(A, order, t, motif::Clique)
 
-    _, cliques::Array{Array{Int64,1},1} = TuranShadow(A,order,t)
+    estimated_total_cliques::Float64, cliques::Array{Array{Int64,1},1} = TuranShadow(A,order,t)
 
     reduce_to_unique_cliques!(cliques)
 
@@ -47,7 +80,7 @@ function tensor_from_graph(A, order, t, motif::Clique)
         idx += 1;
     end
 
-    return SymTensorUnweighted{Clique}(size(A,1),order,round.(Int,indices))
+    return SymTensorUnweighted{Clique}(size(A,1),order,round.(Int,indices)), estimated_total_cliques
 
 end
 
@@ -58,9 +91,10 @@ function tensor_from_graph(A, order::Int, motif::Clique;max_samples=10^9,verbose
     all_cliques = Array{Array{Int64,1},1}(undef,0)
     prev_motif_count = 0
     used_samples = 0
+    last_estimated_total_cliques = 0
     while t < max_samples
 
-        _, cliques::Array{Array{Int64,1},1} = TuranShadow(A,order,t)
+        last_estimated_total_cliques::Float64, cliques::Array{Array{Int64,1},1} = TuranShadow(A,order,t)
         used_samples += t
 
         append!(all_cliques,cliques)
@@ -83,10 +117,38 @@ function tensor_from_graph(A, order::Int, motif::Clique;max_samples=10^9,verbose
         idx += 1;
     end
 
-    return SymTensorUnweighted{Clique}(size(A,1),order,round.(Int,indices))
+    return SymTensorUnweighted{Clique}(size(A,1),order,round.(Int,indices)), last_estimated_total_cliques
 
 end
 
+#  -- Profiled Versions
+
+function tensor_from_graph_profiled(A, order::Int,ε::Float64, δ::Float64,motif::Clique;verbose=false)
+    profiling = Dict()
+   
+    (bound_samples, approx_number_of_cliques::Float64, cliques::Array{Array{Int64,1},1}),rt = @timed TuranShadow(A, order, ε, δ)
+    profiling["samples"] = bound_samples
+    profiling["TuranShadow_rt"] = rt
+    profiling["TuranShadow_approx_clique_count"] = approx_number_of_cliques
+
+    _,rt = @timed reduce_to_unique_cliques!(cliques)
+    profiling["reduction_rt"] = rt 
+    profiling["motif_count"]= length(cliques)
+
+    indices = Array{Int,2}(undef,order,length(cliques))
+    idx = 1
+    for clique in cliques #is there a better way to do this? 
+        indices[:,idx] = clique
+        idx += 1;
+    end
+
+    return SymTensorUnweighted{Clique}(size(A,1),order,round.(Int,indices)), profiling
+
+end
+
+
+# This version runs multiple phases and doubles the number of samples used until no new cliques are
+# found. 
 function tensor_from_graph_profiled(A, order::Int, motif::Clique;max_samples=10^9,verbose=false)
 
     t = 10000
@@ -95,6 +157,7 @@ function tensor_from_graph_profiled(A, order::Int, motif::Clique;max_samples=10^
         ("motif_count",[]),
         ("samples",[]),
         ("reduction_rt",[]),
+        ("TuranShadow_approx_clique_count",[]),
         ("TuranShadow_rt",[]),
         ("append!_rt",[]),
     ])
@@ -105,8 +168,9 @@ function tensor_from_graph_profiled(A, order::Int, motif::Clique;max_samples=10^
     while t < max_samples
 
         push!(profiling["samples"],t)
-        (_, cliques::Array{Array{Int64,1},1}),rt = @timed TuranShadow(A,order,t)
+        (approx_number_of_cliques::Float64, cliques::Array{Array{Int64,1},1}),rt = @timed TuranShadow(A,order,t)
         push!(profiling["TuranShadow_rt"],rt)
+        push!(profiling["TuranShadow_approx_clique_count"],approx_number_of_cliques)
 
         used_samples += t
         _,rt = @timed append!(all_cliques,cliques)

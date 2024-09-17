@@ -134,13 +134,38 @@ function sample_shadow(A::SparseMatrixCSC{F,Int64},S::Vector{OneShadow},k::Int,t
     return approxval,clique_sets
 end
 
+
+
+
+# Use the bound in the paper to compute the number of samples. 
+# ε is the error factor of how many cliques are sampled to how many are in the graph 
+# | ˆCk − |Ck (G)|| ≤ ε|Ck (G)|.
+# 1 - δ is the probability that the ε threshold is met. 
+function TuranShadow(A::SparseMatrixCSC{F,Int64},k::Int,ε::Float64,δ::Float64,exact_clique::Bool=true) where F <: Real
+    S, _, samples = TuranShadow_samples(A, k, ε, δ)
+    return samples, TuranShadow(A, S, k, samples, exact_clique)...
+end 
+
+function TuranShadow_samples(A::SparseMatrixCSC{F,Int64},k::Int,ε::Float64,δ::Float64) where F <: Real
+    S = shadow_finder(A,k)
+    γ = 1/maximum( (ℯ^shadow.k)/sqrt(2*π*(shadow.k)^5)*(length(shadow.vertices))^2 for shadow in S) 
+                  # using Stirling's approximation to estimate  k^(k−2)/k!.
+    samples = (20/(γ*(ε)^2))*log(1/δ)
+    return S, γ, samples
+end 
+
+
 function TuranShadow(A::SparseMatrixCSC{F,Int64},k::Int,t::Int,exact_clique::Bool=true) where F <: Real
     S = shadow_finder(A,k)
+    return TuranShadow(A, S, k, t, exact_clique)
+end 
+
+function TuranShadow(A::SparseMatrixCSC{F,Int64},S::Vector{OneShadow},k::Int,t::Int,exact_clique::Bool=true) where F <: Real
     if length(S) == 0
         return 0,Array{Array{Int,1}}(undef,0)
     else
         approxval,clique_sets = sample_shadow(A,S,k,t,exact_clique)
-        return approxval,clique_sets
+        return approxval, clique_sets
     end
 end
 
