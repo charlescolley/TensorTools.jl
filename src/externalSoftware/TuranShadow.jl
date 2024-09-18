@@ -142,15 +142,23 @@ end
 # 1 - δ is the probability that the ε threshold is met. 
 function TuranShadow(A::SparseMatrixCSC{F,Int64},k::Int,ε::Float64,δ::Float64,exact_clique::Bool=true) where F <: Real
     S, _, samples = TuranShadow_samples(A, k, ε, δ)
-    return samples, TuranShadow(A, S, k, samples, exact_clique)...
+    if length(S) == 0 
+        return  0, Array{Array{Int,1}}(undef,0)
+    else
+        return samples, TuranShadow(A, S, k, samples, exact_clique)...
+    end
 end 
 
 function TuranShadow_samples(A::SparseMatrixCSC{F,Int64},k::Int,ε::Float64,δ::Float64) where F <: Real
     S = shadow_finder(A,k)
-    γ = 1/maximum( (ℯ^shadow.k)/sqrt(2*π*(shadow.k)^5)*(length(shadow.vertices))^2 for shadow in S) 
-                  # using Stirling's approximation to estimate  k^(k−2)/k!.
-    samples = Int(ceil((20/(γ*(ε)^2))*log(1/δ)))
-    return S, γ, samples
+    if length(S) == 0
+        Array{Array{Int,1}}(undef,0), -1.0, 0
+    else
+        γ = 1/maximum( (ℯ^shadow.k)/sqrt(2*π*(shadow.k)^5)*(length(shadow.vertices))^2 for shadow in S) 
+                    # using Stirling's approximation to estimate  k^(k−2)/k!.
+        samples = Int(ceil((20/(γ*(ε)^2))*log(1/δ)))
+        return S, γ, samples
+    end
 end 
 
 
@@ -160,12 +168,9 @@ function TuranShadow(A::SparseMatrixCSC{F,Int64},k::Int,t::Int,exact_clique::Boo
 end 
 
 function TuranShadow(A::SparseMatrixCSC{F,Int64},S::Vector{OneShadow},k::Int,t::Int,exact_clique::Bool=true) where F <: Real
-    if length(S) == 0
-        return 0,Array{Array{Int,1}}(undef,0)
-    else
-        approxval,clique_sets = sample_shadow(A,S,k,t,exact_clique)
-        return approxval, clique_sets
-    end
+    @assert length(S) > 0 
+    approxval,clique_sets = sample_shadow(A,S,k,t,exact_clique)
+    return approxval, clique_sets
 end
 
 
