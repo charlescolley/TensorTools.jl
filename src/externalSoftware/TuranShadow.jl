@@ -143,7 +143,7 @@ end
 function TuranShadow(A::SparseMatrixCSC{F,Int64},k::Int,ε::Float64,δ::Float64,exact_clique::Bool=true) where F <: Real
     S, _, samples = TuranShadow_samples(A, k, ε, δ)
     if length(S) == 0 
-        return  0, Array{Array{Int,1}}(undef,0)
+        return  0, -1, Array{Array{Int,1}}(undef,0)
     else
         return samples, TuranShadow(A, S, k, samples, exact_clique)...
     end
