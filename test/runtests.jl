@@ -3,7 +3,7 @@ using Suppressor
 using Distributed
 
 using SparseArrays
-import Random:seed!
+#import Random:seed!
 import MatrixNetworks:erdos_renyi_undirected, triangles
 import LinearAlgebra:norm
 
@@ -15,7 +15,7 @@ import LinearAlgebra:norm
 using TensorTools
 const T = TensorTools
 
-seed!(54321)
+T.seed!(54321)
 n= 10
 trials = 1000
 order = 4
@@ -40,10 +40,13 @@ end
 
 addprocs(7)
 @everywhere using TensorTools
+using MAT
 
 include("distributedTuranShadow_tests.jl")
 include("fileio_tests.jl")
 include("tensorConstruction_tests.jl")
+include("eigenvector_algorithms_tests.jl")
+
 include("contraction_tests.jl")
 #include("MPI_tests.jl")
 

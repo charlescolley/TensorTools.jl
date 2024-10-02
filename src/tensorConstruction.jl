@@ -273,7 +273,7 @@ end
 
 function tensors_from_graph(A::SparseMatrixCSC{T,Int64}, maxCycleLength::Int,samples::Int,motif::Cycle) where T
 
-	LG_A = LightGraphs.SimpleGraph(A)
+	LG_A = SimpleGraph(A)
 
 	cycles = simplecycles_limited_length(LG_A,maxCycleLength,samples)
     if length(cycles) == 0 
@@ -408,3 +408,83 @@ function matrix_to_SymTensorUnweighted(A::SparseMatrixCSC{T,Int},motif::S) where
 end
 
 
+#
+#    Subgraph remapping
+#
+function touched_vertices(A_tens::AbstractVector{SymTensorUnweighted{Clique}},resize=true)
+    touched = zeros(Int64,maximum(A_ten.n for A_ten in A_tens))
+    for A_ten in A_tens
+        touched_vertices!(touched,A_ten, false)
+    end
+    resize && resize_to_touched_vertices!(touched)
+    return touched
+end
+
+"""
+
+"""
+function touched_vertices(A_ten::SymTensorUnweighted{Clique},resize=true)
+    touched = zeros(Int64,A_ten.n)
+    touched_vertices!(touched,A_ten, resize)
+    return touched
+end
+
+function touched_vertices!(touched::Vector{Int},A_ten::SymTensorUnweighted{Clique},resize=true)
+    for hyperedge in eachcol(A_ten.indices)
+        for iⱼ in hyperedge
+            touched[iⱼ] = 1 
+        end 
+    end
+    resize && resize_to_touched_vertices!(touched);
+end
+
+"""
+    resizes the touched
+"""
+function resize_to_touched_vertices!(touched::Vector)
+    n = length(touched)
+    touched_vertices = 0
+    for i = 1:n
+        if touched[i] == 1
+            touched_vertices += 1
+            touched[touched_vertices] = i
+        end
+    end
+    resize!(touched,touched_vertices)
+
+end 
+function resize_to_touched_vertices(touched)
+    resize_to_touched_vertices!(copy(touched))
+end
+
+
+
+function remap_to_touched_vertices(A_ten)
+
+end
+
+function remap_to_touched_vertices!(A_ten)
+
+    touched_filter = touched_vertices(A_ten,false)
+    touched = resize_to_touched_vertices(touched_filter)
+
+    # update the touched_filter to be the vertex it's remapped to in the
+    for (new_id, old_id) in enumerate(touched)
+        touched_filter[old_id] = new_id
+    end
+    @assert sum(touched_filter .> 0) == length(touched)
+
+    return (;tensor=remap!(A_ten,touched_filter), map_used=touched_filter)
+end 
+
+function remap!(A_ten::SymTensorUnweighted{M},new_ids) where {M <: Motif}
+
+    for (edge_idx,hyperedge) in enumerate(eachcol(A_ten.indices))
+        for (j,iⱼ) in enumerate(hyperedge)
+            A_ten.indices[j,edge_idx] = new_ids[iⱼ]
+        end     
+    end
+
+    return SymTensorUnweighted{M}(maximum(new_ids), A_ten.order, A_ten.indices)
+          # make new bc type is immutable                       # use the same indices to save memory.
+end 

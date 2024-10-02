@@ -5,7 +5,7 @@ include("hard_coded_contractions.jl")
 @testset "Type Stability" begin
 
     orders = [3,4]
-    clique_unweighted_tensors = tensors_from_graph(A,orders,1000,Clique())
+    clique_unweighted_tensors,_ = tensors_from_graph(A,orders,1000,Clique())
     cycle_unweighted_tensors = tensors_from_graph(A,orders,100000,Cycle())
     clique_weighted_tensors = [SymTensor{Clique}(A_ten.n,A_ten.order,A_ten.indices,ones(size(A_ten.indices,2))) for A_ten in clique_unweighted_tensors]
 
@@ -38,7 +38,7 @@ end
 @testset "Contraction Comparisons" begin 
 
     orders = [3,4,5]
-    unweighted_tensors = tensors_from_graph(A,orders,1000,Clique())
+    unweighted_tensors,_ = tensors_from_graph(A,orders,1000,Clique())
     const_weighted_tensors = [SymTensor{Clique}(A_ten.n,A_ten.order,A_ten.indices,ones(size(A_ten.indices,2))) for A_ten in unweighted_tensors]
     rand_weighted_tensors = [SymTensor{Clique}(A_ten.n,A_ten.order,A_ten.indices,rand(size(A_ten.indices,2))) for A_ten in unweighted_tensors]
     x  = ones(n)

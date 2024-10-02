@@ -26,23 +26,34 @@ using Combinatorics:integer_partitions,permutations, multinomial, combinations, 
 
 #NOTE: keeping @pyimport currently triggers compilation error "ERROR: LoadError: Evaluation into the closed module `__anon__`..."
 
+abstract type SymTensors end
 abstract type Motif  end
 struct Clique <: Motif end
 struct Cycle <: Motif end
 
-struct SymTensorUnweighted{T <: Motif}
+struct SymTensorUnweighted{T <: Motif} <: SymTensors
     n::Int
     order::Int
     indices::Array{Int,2}
 end
 
-struct SymTensor{T <: Motif,S}
+struct SymTensor{T <: Motif,S} <: SymTensors
     n::Int
     order::Int
     indices::Matrix{Int}
     weights::Vector{S}
     SymTensor{T}(n::Int,order::Int,indices::Matrix{Int},weights::Vector{S}) where {T<:Motif,S} = new{T,S}(n,order,indices,weights)
 end
+
+n(A_tens::AbstractVector{T}) where {T <: SymTensors} = maximum(A_ten.n for A_ten in A_tens)::Int
+n(A_ten::T) where {T <: SymTensors} = A_ten.n::Int
+
+order(A_tens::AbstractVector{T}) where {T <: SymTensors} = maximum(order(A_ten) for A_ten in A_tens)::Int
+order(A_ten::T) where {T <: SymTensors} = A_ten.order::Int
+
+nnz(A_tens::AbstractVector{T}) where {T <: SymTensors} = (nnzs(A_ten) for A_ten in A_tens)::Int
+nnz(A_ten::T) where {T <: SymTensors} = size(A_ten.indices,2)::Int
+
 
 #struct TensorComplexUnweighted
 #    tensors::Array{SymTensorUnweighted,1}
@@ -56,9 +67,23 @@ end
 
 include("fileio.jl")
 include("tensorConstruction.jl")
+export touched_vertices
+
 include("contraction.jl")
 export partitions
 include("distributedTuranShadow.jl")
+using LinearMaps
+using IterativeSolvers: gmres, minres!
+using Random: seed!
+using GenericArpack: symeigs
+include("eigenvector_algorithms.jl")
+export NCM, ONCM, DynamicalSystems
+export largestMagnitude, forwardEuler
+export Backslash, GMRES, MINRES
+
+export sample_eigenvectors, sample_eigenvectors_profiled
+export unique_eigenvalues, eigenspace_residual
+
 
 
 #TODO: move to Experiments.jl?
